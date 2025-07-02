@@ -286,12 +286,12 @@
       </div>
       <form id="complaintFormElement" autocomplete="off" style="margin-top:4px;">
         <label for="customerSearchInput" style="margin-top:12px;">Customer Name</label>
-        <input id="customerSearchInput" name="name" type="text" placeholder="Type to search customer name..." autocomplete="off" required>
+        <input id="customerSearchInput" name="name" type="text" placeholder="Type to search customer name..." autocomplete="name" required>
         <div id="customerAutocompleteList" class="autocomplete-items" style="display:none;"></div>
         <label>STB Number</label>
-        <input id="stbNumber" name="stbNumber" type="text" readonly>
+        <input id="stbNumber" name="stbNumber" type="text" autocomplete="off" readonly>
         <label>Complaint Type</label>
-        <select id="complaintType" name="complaintType" required>
+        <select id="complaintType" name="complaintType" autocomplete="off" required>
           <option value="">Select complaint type</option>
           <option>Channel Freezing</option>
           <option>No Sound</option>
@@ -309,27 +309,27 @@
           <option>Other</option>
         </select>
         <label>Comments (Optional)</label>
-        <textarea id="comments" name="comments" rows="2" placeholder="Add any additional details..."></textarea>
+        <textarea id="comments" name="comments" rows="2" placeholder="Add any additional details..." autocomplete="off"></textarea>
         <label>Customer Address</label>
-        <textarea id="customerAddress" name="address" rows="2" readonly></textarea>
+        <textarea id="customerAddress" name="address" rows="2" autocomplete="street-address" readonly></textarea>
         <div class="row">
           <div>
             <label>Customer Location (GPS)</label>
-            <input id="customerLocation" name="gps" type="text" readonly>
+            <input id="customerLocation" name="gps" type="text" autocomplete="off" readonly>
           </div>
           <div>
             <label>Phone 1</label>
-            <input id="phone1" name="phone1" type="text" readonly>
+            <input id="phone1" name="phone1" type="text" autocomplete="tel" readonly>
           </div>
         </div>
         <div class="row">
           <div>
             <label>Phone 2</label>
-            <input id="phone2" name="phone2" type="text" readonly>
+            <input id="phone2" name="phone2" type="text" autocomplete="tel" readonly>
           </div>
           <div>
             <label>Phone 3</label>
-            <input id="phone3" name="phone3" type="text" readonly>
+            <input id="phone3" name="phone3" type="text" autocomplete="tel" readonly>
           </div>
         </div>
         <div class="form-actions">
@@ -581,6 +581,7 @@
       document.getElementById('phone2').value = customer[customerFields.phone2] || "";
       document.getElementById('phone3').value = customer[customerFields.phone3] || "";
     }
+
     function setupCustomerAutocomplete() {
       const input = document.getElementById('customerSearchInput');
       const list = document.getElementById('customerAutocompleteList');
