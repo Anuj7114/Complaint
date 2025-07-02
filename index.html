@@ -288,11 +288,13 @@
         <button id="closeFormBtn" style="background:none;border:none;color:#374151;font-size:23px;"><i class="material-icons">close</i></button>
       </div>
       <form id="complaintFormElement" autocomplete="off">
-        <label>Customer Name</label>
-        <input id="customerSearchInput" name="customer" type="text" placeholder="Type to search customer name..." autocomplete="off" required>
+        <label>Customer STB Number</label>
+        <input id="customerSearchInput" name="stbNumber" type="text" placeholder="Type to search STB Number..." autocomplete="off" required>
         <div id="customerAutocompleteList" class="autocomplete-items" style="display:none;"></div>
+        <label>Customer Name</label>
+        <input id="customerName" name="name" type="text" readonly>
         <label>Complaint Type</label>
-        <select id="complaintType" name="type" required>
+        <select id="complaintType" name="complaintType" required>
           <option value="">Select complaint type</option>
           <option>Channel Freezing</option>
           <option>No Sound</option>
@@ -311,23 +313,19 @@
         </select>
         <label>Comments (Optional)</label>
         <textarea id="comments" name="comments" rows="2" placeholder="Add any additional details..."></textarea>
-        <div class="row">
-          <div>
-            <label>STB Number</label>
-            <input id="stbNumber" name="stbNumber" type="text" readonly>
-          </div>
-          <div>
-            <label>Customer Location (GPS)</label>
-            <input id="customerLocation" name="gps" type="text" readonly>
-          </div>
-        </div>
         <label>Customer Address</label>
         <textarea id="customerAddress" name="address" rows="2" readonly></textarea>
         <div class="row">
           <div>
+            <label>Customer Location (GPS)</label>
+            <input id="customerLocation" name="gps" type="text" readonly>
+          </div>
+          <div>
             <label>Phone 1</label>
             <input id="phone1" name="phone1" type="text" readonly>
           </div>
+        </div>
+        <div class="row">
           <div>
             <label>Phone 2</label>
             <input id="phone2" name="phone2" type="text" readonly>
@@ -343,51 +341,40 @@
         </div>
       </form>
     </section>
-    <!-- Resolve Complaint Form (hidden, for demo UI only) -->
-    <section id="resolveComplaintForm" class="form-section hidden">
-      <div style="display:flex;justify-content:space-between;align-items:center;">
-        <h2 style="font-size:17px;margin:0;font-weight:bold;">Resolve Complaint</h2>
-        <button id="closeResolveFormBtn" style="background:none;border:none;color:#374151;font-size:23px;"><i class="material-icons">close</i></button>
-      </div>
-      <form id="resolveComplaintFormElement" autocomplete="off">
-        <label>Customer Name</label>
-        <input id="resolveCustomerName" type="text" readonly>
-        <label>Complaint Type</label>
-        <input id="resolveComplaintType" type="text" readonly>
-        <label>Comments</label>
-        <textarea id="resolveComplaintComments" readonly></textarea>
-        <label>STB Number</label>
-        <input id="resolveStbNumber" type="text" readonly>
-        <label>Address</label>
-        <textarea id="resolveAddress" readonly></textarea>
-        <div class="row">
-          <div>
-            <label>Phone 1</label>
-            <input id="resolvePhone1" type="text" readonly>
-          </div>
-          <div>
-            <label>Phone 2</label>
-            <input id="resolvePhone2" type="text" readonly>
-          </div>
-          <div>
-            <label>Phone 3</label>
-            <input id="resolvePhone3" type="text" readonly>
-          </div>
-        </div>
-        <label>Resolution Comments (Optional)</label>
-        <textarea id="resolutionComments" rows="2" placeholder="Add any resolution details..."></textarea>
-        <div class="form-actions">
-          <button type="button" id="cancelResolveComplaintBtn" class="form-btn cancel">Cancel</button>
-          <button type="submit" class="form-btn">Resolve</button>
-        </div>
-      </form>
-    </section>
   </main>
   <script>
-    // Config
+    // API endpoints
     const SHEETDB_API = "https://sheetdb.io/api/v1/ner9gfv7uhpnb";
     const SHEETDB_CUSTOMERS_API = "https://sheetdb.io/api/v1/f5vg3sptzr3d4";
-    // State
+    // Field mapping for customers
+    const customerFields = {
+      stb: "STB Number",
+      name: "NAME",
+      address: "ADD",
+      gps: "GPS",
+      phone1: "PHONE 1",
+      phone2: "PHONE 2",
+      phone3: "PHONE 3",
+    };
+    // Field mapping for complaints
+    const complaintFields = {
+      timestamp: "Timestamp",
+      name: "Name",
+      complaintType: "Complaint Type",
+      comments: "Comments",
+      stbNumber: "STB Number",
+      address: "Address",
+      gps: "GPS",
+      phone1: "Phone 1",
+      phone2: "Phone 2",
+      phone3: "Phone 3",
+      status: "Status",
+      resolvedAt: "ResolvedAt",
+      resolutionTime: "Resolution Time (mins)",
+      resolutionDistance: "Resolution Distance (m)",
+      resolutionReason: "Resolution Reason",
+    };
+
     let complaintData = [], customerList = [];
     // Show/hide helpers
     function showSection(id) {
@@ -395,7 +382,6 @@
       document.getElementById('homeSection').classList.add('hidden');
       document.getElementById('pendingListSection').classList.add('hidden');
       document.getElementById('complaintForm').classList.add('hidden');
-      document.getElementById('resolveComplaintForm').classList.add('hidden');
       document.getElementById(id).classList.remove('hidden');
     }
     // Format date
@@ -405,11 +391,11 @@
     }
     // Dashboard counts and insights
     function updateDashboard() {
-      let pending = complaintData.filter(c => !c.resolved_at);
+      let pending = complaintData.filter(c => (c[complaintFields.status] || "").toLowerCase() !== "resolved");
       document.getElementById('pendingComplaintsCount').textContent = pending.length;
       let now = Date.now(), count2h = 0, count24h = 0;
       pending.forEach(c => {
-        let created = Date.parse(c.timestamp || c.created_at);
+        let created = Date.parse(c[complaintFields.timestamp]);
         if (!isNaN(created)) {
           let diff = (now - created) / (1000 * 60 * 60);
           if (diff > 2 && diff <= 24) count2h++;
@@ -424,15 +410,15 @@
       let nowD = Date.now();
       let dailyPendingList=[], dailyResolvedList=[], weeklyPendingList=[], weeklyResolvedList=[];
       pending.forEach(c => {
-        let created = Date.parse(c.timestamp || c.created_at);
+        let created = Date.parse(c[complaintFields.timestamp]);
         if (!isNaN(created)) {
           let diffDays = (nowD - created) / MS_PER_DAY;
           if (diffDays <= 1) {dailyPending++;dailyPendingList.push(c);}
           if (diffDays <= 7) {weeklyPending++;weeklyPendingList.push(c);}
         }
       });
-      complaintData.filter(c=>c.resolved_at).forEach(c => {
-        let resolvedAt = Date.parse(c.resolved_at);
+      complaintData.filter(c=>(c[complaintFields.status]||"").toLowerCase() === "resolved").forEach(c => {
+        let resolvedAt = Date.parse(c[complaintFields.resolvedAt]);
         if (!isNaN(resolvedAt)) {
           let diffDays = (nowD - resolvedAt) / MS_PER_DAY;
           if (diffDays <= 1) {dailyResolved++;dailyResolvedList.push(c);}
@@ -443,7 +429,6 @@
       document.getElementById('dailyResolvedCount').textContent = dailyResolved;
       document.getElementById('weeklyPendingCount').textContent = weeklyPending;
       document.getElementById('weeklyResolvedCount').textContent = weeklyResolved;
-      // Save for modal
       window._insightsData = {
         dailyPending: dailyPendingList,
         dailyResolved: dailyResolvedList,
@@ -464,10 +449,11 @@
         filter === "2h" ? "Pending for 2hrs" :
         filter === "24h" ? "Pending Complaints (>24h)" : "Pending Complaints";
       let now = Date.now();
-      let list = complaintData.filter(c=>!c.resolved_at).sort((a,b)=>(a.timestamp||a.created_at||"")>(b.timestamp||b.created_at||"")?1:-1);
+      let list = complaintData.filter(c => (c[complaintFields.status]||"").toLowerCase() !== "resolved")
+        .sort((a,b)=>new Date(a[complaintFields.timestamp]||"")-new Date(b[complaintFields.timestamp]||""));
       if (filter === "2h") {
         list = list.filter(c => {
-          let created = Date.parse(c.timestamp || c.created_at);
+          let created = Date.parse(c[complaintFields.timestamp]);
           if (!isNaN(created)) {
             let diff = (now - created) / (1000 * 60 * 60);
             return diff > 2 && diff <= 24;
@@ -476,7 +462,7 @@
         });
       } else if (filter === "24h") {
         list = list.filter(c => {
-          let created = Date.parse(c.timestamp || c.created_at);
+          let created = Date.parse(c[complaintFields.timestamp]);
           if (!isNaN(created)) {
             let diff = (now - created) / (1000 * 60 * 60);
             return diff > 24;
@@ -491,9 +477,11 @@
       }
       cardList.innerHTML = list.map((c,i) => `
         <div class="mob-card">
-          <div><b>${c.customer || ""}</b> <span style="font-size:13px;color:#6d7280;">${formatDate(c.timestamp||c.created_at)}</span></div>
-          <div><span style="font-size:15px;color:#1e293b;">${c.type || ""}</span></div>
-          ${c.comments ? `<div style="font-size:13px;color:#64748b;margin-bottom:2px;">${c.comments}</div>` : ""}
+          <div><b>${c[complaintFields.name] || ""}</b> <span style="font-size:13px;color:#6d7280;">${formatDate(c[complaintFields.timestamp])}</span></div>
+          <div><span style="font-size:15px;color:#1e293b;">${c[complaintFields.complaintType] || ""}</span></div>
+          ${c[complaintFields.comments] ? `<div style="font-size:13px;color:#64748b;margin-bottom:2px;">${c[complaintFields.comments]}</div>` : ""}
+          <div><span style="font-size:13px;color:#64748b;">STB: ${c[complaintFields.stbNumber]||""}</span></div>
+          <div><span style="font-size:13px;color:#64748b;">${c[complaintFields.address]||""}</span></div>
         </div>
       `).join('');
     }
@@ -511,16 +499,16 @@
       } else {
         html += `<ul style="padding:0;margin:0;">`;
         list.forEach((c, i) => {
-          let phone = c.phone1 || c.phone2 || c.phone3 || "";
+          let phone = c[complaintFields.phone1] || c[complaintFields.phone2] || c[complaintFields.phone3] || "";
           let phoneHtml = phone
             ? `<span style="color:#2563eb;font-weight:600;">${phone}</span>
                 <a href="tel:${phone}" style="margin-left:8px;background:#22c55e;padding:6px 12px;border-radius:7px;color:#fff;font-weight:600;text-decoration:none;font-size:15px;">Call</a>`
             : `<span style="color:#9ca3af;font-style:italic;">No phone</span>`;
           html += `<li style="margin-bottom:10px;">
-            <div><b>${c.customer || '(No Name)'}</b> ${phoneHtml}</div>
-            <div style="color:#64748b;font-size:13px;">Type: ${c.type || ''}${c.type ? ', ' : ''}STB: ${c.stbNumber || ''}</div>
-            <div style="color:#a1a1aa;font-size:12px;">${formatDate(c.timestamp || c.created_at || c.resolved_at)}</div>
-            ${c.comments ? `<div style="color:#4b5563;">Comments: ${c.comments}</div>` : ''}
+            <div><b>${c[complaintFields.name] || '(No Name)'}</b> ${phoneHtml}</div>
+            <div style="color:#64748b;font-size:13px;">Type: ${c[complaintFields.complaintType] || ''}${c[complaintFields.complaintType] ? ', ' : ''}STB: ${c[complaintFields.stbNumber] || ''}</div>
+            <div style="color:#a1a1aa;font-size:12px;">${formatDate(c[complaintFields.timestamp] || c[complaintFields.resolvedAt])}</div>
+            ${c[complaintFields.comments] ? `<div style="color:#4b5563;">Comments: ${c[complaintFields.comments]}</div>` : ''}
           </li>`;
         });
         html += `</ul>`;
@@ -546,7 +534,6 @@
     document.getElementById('backToHomeBtn').onclick = function() {
       showSection('registerComplaintDiv'); showSection('homeSection');
     };
-    // Insights modal
     document.getElementById('showDailyPendingListBtn').onclick = function() { renderInsightListModal("dailyPending"); };
     document.getElementById('showDailyResolvedListBtn').onclick = function() { renderInsightListModal("dailyResolved"); };
     document.getElementById('showWeeklyPendingListBtn').onclick = function() { renderInsightListModal("weeklyPending"); };
@@ -561,16 +548,17 @@
       const form = e.target;
       const payload = {
         data: {
-          customer: form.customer.value,
-          type: form.type.value,
-          comments: form.comments.value,
-          stbNumber: form.stbNumber.value,
-          gps: form.gps.value,
-          address: form.address.value,
-          phone1: form.phone1.value,
-          phone2: form.phone2.value,
-          phone3: form.phone3.value,
-          timestamp: new Date().toISOString()
+          [complaintFields.timestamp]: new Date().toISOString(),
+          [complaintFields.name]: form.name.value,
+          [complaintFields.complaintType]: form.complaintType.value,
+          [complaintFields.comments]: form.comments.value,
+          [complaintFields.stbNumber]: form.stbNumber.value,
+          [complaintFields.address]: form.address.value,
+          [complaintFields.gps]: form.gps.value,
+          [complaintFields.phone1]: form.phone1.value,
+          [complaintFields.phone2]: form.phone2.value,
+          [complaintFields.phone3]: form.phone3.value,
+          [complaintFields.status]: "Pending"
         }
       };
       await fetch(SHEETDB_API, {
@@ -598,18 +586,19 @@
     }
 
     function fillCustomerDetails(customer) {
-      document.getElementById('stbNumber').value = customer.stb || customer.STB || "";
-      document.getElementById('customerLocation').value = customer.gps || customer.GPS || "";
-      document.getElementById('customerAddress').value = customer.address || customer.Address || "";
-      document.getElementById('phone1').value = customer.phone1 || customer.Phone1 || "";
-      document.getElementById('phone2').value = customer.phone2 || customer.Phone2 || "";
-      document.getElementById('phone3').value = customer.phone3 || customer.Phone3 || "";
+      document.getElementById('customerName').value = customer[customerFields.name] || "";
+      document.getElementById('customerAddress').value = customer[customerFields.address] || "";
+      document.getElementById('customerLocation').value = customer[customerFields.gps] || "";
+      document.getElementById('phone1').value = customer[customerFields.phone1] || "";
+      document.getElementById('phone2').value = customer[customerFields.phone2] || "";
+      document.getElementById('phone3').value = customer[customerFields.phone3] || "";
     }
     function setupCustomerAutocomplete() {
       const input = document.getElementById('customerSearchInput');
       const list = document.getElementById('customerAutocompleteList');
       let activeIndex = -1;
-      input.addEventListener('input', function() {
+
+      input.oninput = function() {
         const val = this.value.trim().toLowerCase();
         list.innerHTML = '';
         activeIndex = -1;
@@ -617,9 +606,9 @@
           list.style.display = 'none';
           return;
         }
-        // Make sure to search by stb or STB column, case-insensitive
+        const stbKey = customerFields.stb;
         const matches = customerList.filter(c =>
-          (c.stb || c.STB || "").toLowerCase().includes(val)
+          (c[stbKey] || "").toLowerCase().includes(val)
         );
         if (matches.length === 0) {
           list.style.display = 'none';
@@ -628,20 +617,21 @@
         matches.slice(0, 20).forEach((c, idx) => {
           const item = document.createElement('div');
           item.className = 'autocomplete-item';
-          item.textContent = c.stb || c.STB;
+          item.textContent = c[stbKey];
           item.tabIndex = -1;
-          item.addEventListener('mousedown', function(e) {
+          item.onmousedown = function(e) {
             e.preventDefault();
-            input.value = c.stb || c.STB;
+            input.value = c[stbKey];
             fillCustomerDetails(c);
             list.innerHTML = '';
             list.style.display = 'none';
-          });
+          };
           list.appendChild(item);
         });
         list.style.display = '';
-      });
-      input.addEventListener('keydown', function(e) {
+      };
+
+      input.onkeydown = function(e) {
         let items = list.querySelectorAll('.autocomplete-item');
         if (!items.length) return;
         if (e.key === "ArrowDown") {
@@ -658,24 +648,27 @@
             items[activeIndex].dispatchEvent(new Event('mousedown'));
           }
         }
-      });
+      };
+
       function updateActive(items, idx) {
         items.forEach((item, i) => {
           if (i === idx) item.classList.add('autocomplete-active');
           else item.classList.remove('autocomplete-active');
         });
       }
-      input.addEventListener('blur', function() {
+
+      input.onblur = function() {
         setTimeout(() => { list.style.display = 'none'; }, 200);
-      });
-      input.addEventListener('change', function() {
+      };
+
+      input.onchange = function() {
         const val = this.value.trim().toLowerCase();
-        const customer = customerList.find(c => (c.stb || c.STB || "").toLowerCase() === val);
+        const stbKey = customerFields.stb;
+        const customer = customerList.find(c => (c[stbKey] || "").toLowerCase() === val);
         if (customer) fillCustomerDetails(customer);
-      });
+      };
     }
 
-    // On load
     fetchCustomerList();
     loadComplaints();
   </script>
