@@ -12,6 +12,14 @@
     .autocomplete-items {position: absolute; z-index: 1000; background: white; border: 1px solid #ccc; width: 100%; max-height: 180px; overflow-y: auto;}
     .autocomplete-item {padding: 8px 12px; cursor: pointer;}
     .autocomplete-item:hover, .autocomplete-active {background: #e2e8f0;}
+    /* Responsive tweak: shrink table, reduce comment width, make resolve visible */
+    @media (max-width: 700px) {
+      #pendingComplaintsTable th, #pendingComplaintsTable td { font-size: 13px; padding: 6px; }
+      #pendingComplaintsTable td.comments-cell { max-width: 90px; word-break: break-word; }
+    }
+    #pendingComplaintsTable td.comments-cell { max-width: 200px; word-break: break-word; }
+    #pendingComplaintsTable td, #pendingComplaintsTable th { white-space: normal; }
+    #pendingComplaintsTable .resolve-cell { width: 1%; }
   </style>
 </head>
 <body class="bg-gray-50 font-sans">
@@ -23,7 +31,7 @@
     </div>
   </header>
 
-  <main class="container mx-auto px-4 py-8">
+  <main class="container mx-auto px-2 py-8">
     <!-- Home Section -->
     <section id="homeSection">
       <!-- Pending Cards Section -->
@@ -62,7 +70,7 @@
     </section>
 
     <!-- Pending Complaints List Section (Hidden by default) -->
-    <section id="pendingComplaintsListSection" class="hidden max-w-3xl mx-auto mb-8">
+    <section id="pendingComplaintsListSection" class="hidden max-w-2xl mx-auto mb-8">
       <div class="flex items-center mb-5">
         <button id="backToHomeBtn" class="mr-4 text-gray-600 hover:text-blue-700">
           <i class="material-icons text-3xl">arrow_back</i>
@@ -72,14 +80,20 @@
         </h2>
       </div>
       <div id="pendingComplaintsTableContainer">
-        <div class="w-full rounded-xl shadow-lg bg-white p-4 overflow-x-auto">
-          <table class="min-w-full text-gray-700 text-sm" id="pendingComplaintsTable">
+        <div class="w-full rounded-xl shadow-lg bg-white p-2 overflow-x-auto">
+          <table class="min-w-full text-gray-700 text-sm" id="pendingComplaintsTable" style="table-layout: fixed;">
+            <colgroup>
+              <col style="width: 28%">
+              <col style="width: 28%">
+              <col style="width: 32%">
+              <col style="width: 12%">
+            </colgroup>
             <thead>
               <tr class="bg-green-100">
-                <th class="px-3 py-2 text-left">Name</th>
-                <th class="px-3 py-2 text-left">Complaint Type</th>
-                <th class="px-3 py-2 text-left">Comments</th>
-                <th class="px-3 py-2 text-left"></th>
+                <th class="px-2 py-2 text-left">Name</th>
+                <th class="px-2 py-2 text-left">Complaint Type</th>
+                <th class="px-2 py-2 text-left">Comments</th>
+                <th class="px-2 py-2 text-left"></th>
               </tr>
             </thead>
             <tbody id="pendingComplaintsTableBody">
@@ -413,11 +427,11 @@
           const tr = document.createElement("tr");
           tr.className = "hover:bg-green-50";
           tr.innerHTML = `
-            <td class="px-3 py-2">${c[COMPLAINT_FIELDS.name] || ""}</td>
-            <td class="px-3 py-2">${c[COMPLAINT_FIELDS.complaintType] || ""}</td>
-            <td class="px-3 py-2">${c[COMPLAINT_FIELDS.comments] || ""}</td>
-            <td class="px-3 py-2">
-              <button class="bg-green-600 text-white px-3 py-1 rounded hover:bg-green-700 btn-animate" onclick="resolveComplaintRow('${c[COMPLAINT_FIELDS.timestamp]}','${c[COMPLAINT_FIELDS.name].replace(/'/g,"\\'")}')">Resolve</button>
+            <td class="px-2 py-2 truncate">${c[COMPLAINT_FIELDS.name] || ""}</td>
+            <td class="px-2 py-2 truncate">${c[COMPLAINT_FIELDS.complaintType] || ""}</td>
+            <td class="px-2 py-2 comments-cell">${c[COMPLAINT_FIELDS.comments] || ""}</td>
+            <td class="px-2 py-2 resolve-cell">
+              <button class="bg-green-600 text-white px-2 py-1 rounded hover:bg-green-700 btn-animate" onclick="resolveComplaintRow('${c[COMPLAINT_FIELDS.timestamp]}','${c[COMPLAINT_FIELDS.name].replace(/'/g,"\\'")}')">Resolve</button>
             </td>
           `;
           tbody.appendChild(tr);
