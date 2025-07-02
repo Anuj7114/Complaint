@@ -132,12 +132,14 @@
         <button id="closeFormBtn" style="background:none;border:none;color:#374151;font-size:23px;"><i class="material-icons">close</i></button>
       </div>
       <form id="complaintFormElement" autocomplete="off" style="margin-top:4px; position:relative;">
-        <label for="customerSearchInput" style="margin-top:12px;">Customer Name</label>
+        <label for="customerSearchInput">Customer Name</label>
         <input id="customerSearchInput" name="name" type="text" placeholder="Type to search customer name..." autocomplete="name" required>
         <div id="customerAutocompleteList" class="autocomplete-items" style="display:none;"></div>
-        <label>STB Number</label>
+
+        <label for="stbNumber">STB Number</label>
         <input id="stbNumber" name="stbNumber" type="text" autocomplete="off" readonly>
-        <label>Complaint Type</label>
+
+        <label for="complaintType">Complaint Type</label>
         <select id="complaintType" name="complaintType" autocomplete="off" required>
           <option value="">Select complaint type</option>
           <option>Channel Freezing</option>
@@ -155,27 +157,30 @@
           <option>New Adapter</option>
           <option>Other</option>
         </select>
-        <label>Comments (Optional)</label>
+
+        <label for="comments">Comments (Optional)</label>
         <textarea id="comments" name="comments" rows="2" placeholder="Add any additional details..." autocomplete="off"></textarea>
-        <label>Customer Address</label>
+
+        <label for="customerAddress">Customer Address</label>
         <textarea id="customerAddress" name="address" rows="2" autocomplete="street-address" readonly></textarea>
+
         <div class="row">
           <div>
-            <label>Customer Location (GPS)</label>
+            <label for="customerLocation">Customer Location (GPS)</label>
             <input id="customerLocation" name="gps" type="text" autocomplete="off" readonly>
           </div>
           <div>
-            <label>Phone 1</label>
+            <label for="phone1">Phone 1</label>
             <input id="phone1" name="phone1" type="text" autocomplete="tel" readonly>
           </div>
         </div>
         <div class="row">
           <div>
-            <label>Phone 2</label>
+            <label for="phone2">Phone 2</label>
             <input id="phone2" name="phone2" type="text" autocomplete="tel" readonly>
           </div>
           <div>
-            <label>Phone 3</label>
+            <label for="phone3">Phone 3</label>
             <input id="phone3" name="phone3" type="text" autocomplete="tel" readonly>
           </div>
         </div>
