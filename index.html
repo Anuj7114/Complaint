@@ -26,7 +26,7 @@
   <main class="container mx-auto px-4 py-8">
     <!-- Pending Cards Section -->
     <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
-      <div id="pendingComplaintsCard" class="rounded-xl bg-gradient-to-br from-green-400 via-green-200 to-green-50 shadow-lg flex flex-col items-center justify-center p-8 btn-animate">
+      <div id="pendingComplaintsCard" class="rounded-xl bg-gradient-to-br from-green-400 via-green-200 to-green-50 shadow-lg flex flex-col items-center justify-center p-8 btn-animate cursor-pointer">
         <i class="material-icons text-white text-5xl mb-2 drop-shadow bg-green-600 rounded-full p-2">pending_actions</i>
         <div class="flex flex-col items-center">
           <span id="pendingComplaintsCount" class="text-green-800 font-black text-6xl md:text-7xl leading-none drop-shadow mb-1">0</span>
@@ -57,6 +57,35 @@
         <span class="text-white font-extrabold drop-shadow">Register Complaint</span>
       </button>
     </div>
+
+    <!-- Pending Complaints List (Hidden by default) -->
+    <section id="pendingComplaintsListSection" class="hidden max-w-3xl mx-auto mb-8">
+      <div class="flex items-center mb-5">
+        <button id="backToHomeBtn" class="mr-4 text-gray-600 hover:text-blue-700">
+          <i class="material-icons text-3xl">arrow_back</i>
+        </button>
+        <h2 class="text-2xl font-bold flex items-center text-green-700">
+          <i class="material-icons mr-2">pending_actions</i> Pending Complaints
+        </h2>
+      </div>
+      <div id="pendingComplaintsTableContainer">
+        <div class="w-full rounded-xl shadow-lg bg-white p-4 overflow-x-auto">
+          <table class="min-w-full text-gray-700 text-sm" id="pendingComplaintsTable">
+            <thead>
+              <tr class="bg-green-100">
+                <th class="px-3 py-2 text-left">Name</th>
+                <th class="px-3 py-2 text-left">Complaint Type</th>
+                <th class="px-3 py-2 text-left">Comments</th>
+                <th class="px-3 py-2 text-left"></th>
+              </tr>
+            </thead>
+            <tbody id="pendingComplaintsTableBody">
+              <tr><td colspan="4" class="text-center py-6 text-gray-400">Loading...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
 
     <!-- Complaint Form Section (Hidden by default) -->
     <section id="complaintForm" class="hidden bg-white rounded-lg shadow-lg p-6 max-w-2xl mx-auto">
@@ -172,10 +201,24 @@
     document.getElementById('registerComplaintBtn').onclick = function() {
       document.getElementById('registerComplaintDiv').classList.add('hidden');
       document.getElementById('complaintForm').classList.remove('hidden');
+      document.getElementById('pendingComplaintsListSection').classList.add('hidden');
     };
     document.getElementById('closeFormBtn').onclick =
     document.getElementById('cancelComplaintBtn').onclick = function() {
       document.getElementById('complaintForm').classList.add('hidden');
+      document.getElementById('registerComplaintDiv').classList.remove('hidden');
+    };
+
+    // Pending Complaints Card click
+    document.getElementById('pendingComplaintsCard').onclick = function() {
+      document.getElementById('registerComplaintDiv').classList.add('hidden');
+      document.getElementById('complaintForm').classList.add('hidden');
+      document.getElementById('pendingComplaintsListSection').classList.remove('hidden');
+      loadPendingComplaintsTable();
+    };
+
+    document.getElementById('backToHomeBtn').onclick = function() {
+      document.getElementById('pendingComplaintsListSection').classList.add('hidden');
       document.getElementById('registerComplaintDiv').classList.remove('hidden');
     };
 
@@ -343,6 +386,56 @@
         document.getElementById('pendingComplaints24hCount').textContent = "0";
       }
     }
+
+    // Pending complaints table
+    async function loadPendingComplaintsTable() {
+      const tbody = document.getElementById('pendingComplaintsTableBody');
+      tbody.innerHTML = '<tr><td colspan="4" class="text-center py-6 text-gray-400">Loading...</td></tr>';
+      try {
+        const res = await fetch(SHEETDB_COMPLAINTS_API + "?sort_by=Timestamp&sort_order=desc");
+        const complaints = await res.json();
+        const pending = complaints.filter(c => (c[COMPLAINT_FIELDS.status] || "").toLowerCase() === "pending");
+        if (!pending.length) {
+          tbody.innerHTML = '<tr><td colspan="4" class="text-center py-6 text-gray-400">No pending complaints.</td></tr>';
+          return;
+        }
+        tbody.innerHTML = "";
+        pending.forEach((c, idx) => {
+          const tr = document.createElement("tr");
+          tr.className = "hover:bg-green-50";
+          tr.innerHTML = `
+            <td class="px-3 py-2">${c[COMPLAINT_FIELDS.name] || ""}</td>
+            <td class="px-3 py-2">${c[COMPLAINT_FIELDS.complaintType] || ""}</td>
+            <td class="px-3 py-2">${c[COMPLAINT_FIELDS.comments] || ""}</td>
+            <td class="px-3 py-2">
+              <button class="bg-green-600 text-white px-3 py-1 rounded hover:bg-green-700 btn-animate" onclick="resolveComplaintRow('${c[COMPLAINT_FIELDS.timestamp]}','${c[COMPLAINT_FIELDS.name].replace(/'/g,"\\'")}')">Resolve</button>
+            </td>
+          `;
+          tbody.appendChild(tr);
+        });
+      } catch {
+        tbody.innerHTML = '<tr><td colspan="4" class="text-center py-6 text-gray-400">Failed to load.</td></tr>';
+      }
+    }
+
+    // Resolve complaint function (SheetDB only supports PATCH by row id or unique field, so we use Timestamp+Name as a unique key)
+    window.resolveComplaintRow = async function(timestamp, name) {
+      if (!timestamp || !name) { alert("Missing complaint data."); return; }
+      try {
+        // PATCH using filter by timestamp AND name
+        const patchUrl = SHEETDB_COMPLAINTS_API + `/search?${encodeURIComponent(COMPLAINT_FIELDS.timestamp)}=${encodeURIComponent(timestamp)}&${encodeURIComponent(COMPLAINT_FIELDS.name)}=${encodeURIComponent(name)}`;
+        await fetch(patchUrl, {
+          method: "PATCH",
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ data: { [COMPLAINT_FIELDS.status]: "Resolved" } })
+        });
+        alert("Complaint resolved!");
+        loadPendingComplaintsTable();
+        fetchAndDisplayPendingCounts();
+      } catch {
+        alert("Failed to resolve complaint.");
+      }
+    };
 
     // Initial load
     fetchAndDisplayPendingCounts();
