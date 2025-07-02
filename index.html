@@ -222,11 +222,9 @@
     CableTV Complaint System
   </header>
   <main>
-    <!-- Register Complaint Button -->
     <div id="registerComplaintDiv">
       <button id="registerComplaintBtn" class="btn"><i class="material-icons">add_circle_outline</i>Register Complaint</button>
     </div>
-    <!-- Dashboard -->
     <section id="homeSection">
       <div class="dash-grid">
         <button id="pendingComplaintsBtn" class="dash-card green">
@@ -266,14 +264,12 @@
         </div>
       </div>
     </section>
-    <!-- Insights Modal -->
     <div id="insightModalBg" class="modal-bg">
       <div class="modal-content">
         <button id="closeInsightModalBtn" class="close"><span class="material-icons">close</span></button>
         <div id="insightModalContent"></div>
       </div>
     </div>
-    <!-- Pending Complaints List -->
     <section id="pendingListSection" class="hidden">
       <div style="display:flex;align-items:center;gap:10px;">
         <button id="backToHomeBtn" style="background:none;border:none;color:#2563eb;font-size:20px;"><i class="material-icons">arrow_back</i></button>
@@ -281,18 +277,17 @@
       </div>
       <div id="pendingComplaintsCardList" class="mob-list"></div>
     </section>
-    <!-- Register Complaint Form -->
     <section id="complaintForm" class="form-section hidden">
       <div style="display:flex;justify-content:space-between;align-items:center;">
         <h2 style="font-size:17px;margin:0;font-weight:bold;">Register New Complaint</h2>
         <button id="closeFormBtn" style="background:none;border:none;color:#374151;font-size:23px;"><i class="material-icons">close</i></button>
       </div>
       <form id="complaintFormElement" autocomplete="off">
-        <label>Customer STB Number</label>
-        <input id="customerSearchInput" name="stbNumber" type="text" placeholder="Type to search STB Number..." autocomplete="off" required>
-        <div id="customerAutocompleteList" class="autocomplete-items" style="display:none;"></div>
         <label>Customer Name</label>
-        <input id="customerName" name="name" type="text" readonly>
+        <input id="customerSearchInput" name="name" type="text" placeholder="Type to search customer name..." autocomplete="off" required>
+        <div id="customerAutocompleteList" class="autocomplete-items" style="display:none;"></div>
+        <label>STB Number</label>
+        <input id="stbNumber" name="stbNumber" type="text" readonly>
         <label>Complaint Type</label>
         <select id="complaintType" name="complaintType" required>
           <option value="">Select complaint type</option>
@@ -384,12 +379,10 @@
       document.getElementById('complaintForm').classList.add('hidden');
       document.getElementById(id).classList.remove('hidden');
     }
-    // Format date
     function formatDate(val) {
       if (!val) return '';
       try { return (new Date(val)).toLocaleString(); } catch { return val; }
     }
-    // Dashboard counts and insights
     function updateDashboard() {
       let pending = complaintData.filter(c => (c[complaintFields.status] || "").toLowerCase() !== "resolved");
       document.getElementById('pendingComplaintsCount').textContent = pending.length;
@@ -436,13 +429,11 @@
         weeklyResolved: weeklyResolvedList
       }
     }
-    // Load all complaints
     async function loadComplaints() {
       const res = await fetch(SHEETDB_API);
       complaintData = await res.json();
       updateDashboard();
     }
-    // Show pending complaints (card list)
     function renderPendingComplaintsList(filter="all") {
       showSection('pendingListSection');
       document.getElementById('pendingListHeader').textContent =
@@ -485,7 +476,6 @@
         </div>
       `).join('');
     }
-    // Modal
     function renderInsightListModal(type) {
       let list = window._insightsData && window._insightsData[type] ? window._insightsData[type] : [];
       let title = "";
@@ -520,7 +510,6 @@
       document.getElementById('insightModalBg').classList.remove('show');
       document.getElementById('insightModalContent').innerHTML = "";
     }
-    // Navigation
     document.getElementById('registerComplaintBtn').onclick = function() {
       showSection('complaintForm');
     };
@@ -542,7 +531,6 @@
     document.getElementById('insightModalBg').onclick = function(e) {
       if(e.target === this) hideInsightModal();
     };
-    // Register complaint
     document.getElementById('complaintFormElement').addEventListener('submit', async function(e) {
       e.preventDefault();
       const form = e.target;
@@ -586,7 +574,7 @@
     }
 
     function fillCustomerDetails(customer) {
-      document.getElementById('customerName').value = customer[customerFields.name] || "";
+      document.getElementById('stbNumber').value = customer[customerFields.stb] || "";
       document.getElementById('customerAddress').value = customer[customerFields.address] || "";
       document.getElementById('customerLocation').value = customer[customerFields.gps] || "";
       document.getElementById('phone1').value = customer[customerFields.phone1] || "";
@@ -606,9 +594,9 @@
           list.style.display = 'none';
           return;
         }
-        const stbKey = customerFields.stb;
+        const nameKey = customerFields.name;
         const matches = customerList.filter(c =>
-          (c[stbKey] || "").toLowerCase().includes(val)
+          (c[nameKey] || "").toLowerCase().includes(val)
         );
         if (matches.length === 0) {
           list.style.display = 'none';
@@ -617,11 +605,11 @@
         matches.slice(0, 20).forEach((c, idx) => {
           const item = document.createElement('div');
           item.className = 'autocomplete-item';
-          item.textContent = c[stbKey];
+          item.textContent = c[nameKey];
           item.tabIndex = -1;
           item.onmousedown = function(e) {
             e.preventDefault();
-            input.value = c[stbKey];
+            input.value = c[nameKey];
             fillCustomerDetails(c);
             list.innerHTML = '';
             list.style.display = 'none';
@@ -663,8 +651,8 @@
 
       input.onchange = function() {
         const val = this.value.trim().toLowerCase();
-        const stbKey = customerFields.stb;
-        const customer = customerList.find(c => (c[stbKey] || "").toLowerCase() === val);
+        const nameKey = customerFields.name;
+        const customer = customerList.find(c => (c[nameKey] || "").toLowerCase() === val);
         if (customer) fillCustomerDetails(customer);
       };
     }
