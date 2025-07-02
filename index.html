@@ -498,35 +498,6 @@
     // Variable to hold the complaint selected for resolution
     let currentResolveComplaint = null;
 
-    // Pending counts logic
-    async function fetchAndDisplayPendingCounts() {
-      try {
-        const res = await fetch(SHEETDB_COMPLAINTS_API + "?sort_by=Timestamp&sort_order=desc");
-        const complaints = await res.json();
-        const now = new Date();
-        let pending = 0, pending2h = 0, pending24h = 0;
-
-        complaints.forEach(c => {
-          if ((c[COMPLAINT_FIELDS.status] || "").toLowerCase() === "pending") {
-            const dt = Date.parse(c[COMPLAINT_FIELDS.timestamp]);
-            if (!isNaN(dt)) {
-              const diffHr = (now - dt) / (1000 * 60 * 60);
-              if (diffHr >= 2 && diffHr < 24) pending2h++;
-              if (diffHr >= 24) pending24h++;
-            }
-            pending++;
-          }
-        });
-        document.getElementById('pendingComplaintsCount').textContent = pending;
-        document.getElementById('pendingComplaints2hCount').textContent = pending2h;
-        document.getElementById('pendingComplaints24hCount').textContent = pending24h;
-      } catch {
-        document.getElementById('pendingComplaintsCount').textContent = "0";
-        document.getElementById('pendingComplaints2hCount').textContent = "0";
-        document.getElementById('pendingComplaints24hCount').textContent = "0";
-      }
-    }
-
     // Pending complaints table
     async function loadPendingComplaintsTable(type = 'all') {
       const tbody = document.getElementById('pendingComplaintsTableBody');
@@ -627,17 +598,31 @@
       }
       try {
         // PATCH using timestamp and name
-        const patchUrl = SHEETDB_COMPLAINTS_API + `/search?${encodeURIComponent(COMPLAINT_FIELDS.timestamp)}=${encodeURIComponent(currentResolveComplaint[COMPLAINT_FIELDS.timestamp])}&${encodeURIComponent(COMPLAINT_FIELDS.name)}=${encodeURIComponent(currentResolveComplaint[COMPLAINT_FIELDS.name])}`;
+        const patchUrl = SHEETDB_COMPLAINTS_API + `/search?Timestamp=${encodeURIComponent(currentResolveComplaint[COMPLAINT_FIELDS.timestamp])}&Name=${encodeURIComponent(currentResolveComplaint[COMPLAINT_FIELDS.name])}`;
         const now = getLocalTimestamp();
-        await fetch(patchUrl, {
+        // Debug output to help with SheetDB matching
+        console.log("PATCH url:", patchUrl, "Data:", {
+          Status: "Resolved",
+          "Resolution Reason": resolutionType,
+          ResolvedAt: now
+        });
+        const response = await fetch(patchUrl, {
           method: "PATCH",
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ data: {
-            [COMPLAINT_FIELDS.status]: "Resolved",
-            [COMPLAINT_FIELDS.resolutionReason]: resolutionType,
-            [COMPLAINT_FIELDS.resolvedAt]: now
-          }})
+          body: JSON.stringify({
+            data: {
+              Status: "Resolved",
+              "Resolution Reason": resolutionType,
+              ResolvedAt: now
+            }
+          })
         });
+        const result = await response.json();
+        console.log("PATCH response:", result);
+        if ((Array.isArray(result) && result.length === 0) || result.updated === 0) {
+          alert("Could not resolve complaint (no matching row). Check your column headers and values!");
+          return;
+        }
         alert("Complaint resolved!");
         currentResolveComplaint = null;
         showHome();
