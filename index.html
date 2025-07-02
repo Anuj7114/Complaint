@@ -6,7 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
   <style>
-    body { max-width: 440px; margin: 0 auto; background: #f3f4f6; font-family: 'Roboto', Arial, sans-serif; color: #111; font-size: 17px; padding-bottom: 65px;}
+    body { max-width: 480px; margin: 0 auto; background: #f3f4f6; font-family: 'Roboto', Arial, sans-serif; color: #111; font-size: 17px; padding-bottom: 70px;}
     header { background: #2563eb; color: #fff; padding: 15px 0 13px 0; font-size: 20px; font-weight: bold; letter-spacing: .01em; text-align: center; position: sticky; top: 0; z-index: 10; box-shadow: 0 2px 9px rgba(0,0,0,0.07); display: flex; align-items: center; justify-content: center; gap: 8px;}
     header .material-icons { font-size: 28px; }
     main {padding: 16px;}
@@ -26,7 +26,24 @@
     .autocomplete-item { padding:13px 15px; font-size:1em; cursor:pointer;}
     .autocomplete-item:active, .autocomplete-active {background:#e0e7ef;}
     .hidden {display:none !important;}
-    @media (max-width: 340px) { body, main {font-size:15px;} .btn {font-size:16px;} .form-section {font-size:15px;} }
+    .dashboard-section {background: #fff; border-radius: 15px; box-shadow: 0 1px 11px rgba(0,0,0,0.11); padding: 11px 5px 7px 5px; margin-bottom: 17px;}
+    .dashboard-header {display: flex; align-items:center; justify-content: space-between; margin-bottom: 5px;}
+    .dashboard-header h2 {font-size: 19px; margin: 0; font-weight: bold;}
+    .dashboard-header .refresh-btn {background: none; border: none; color: #2563eb; font-size: 25px; cursor:pointer;}
+    .search-bar { width: 100%; box-sizing: border-box; margin-bottom: 10px; }
+    .search-bar input, .search-bar select { width: 32%; margin: 0 2px 7px 0; display: inline-block;}
+    .complaints-table { width: 100%; border-collapse: collapse; font-size: 15px;}
+    .complaints-table th, .complaints-table td { padding: 7px 4px; text-align: left; border-bottom: 1px solid #e5e7eb;}
+    .complaints-table th { font-weight:700; background: #f3f4f6;}
+    .complaint-status { font-weight: bold; border-radius: 5px; padding:2px 7px;}
+    .complaint-status.Pending { color: #fff; background: #f59e42;}
+    .complaint-status.Resolved { color: #fff; background: #22c55e;}
+    .action-btn { background: none; border: none; cursor: pointer; color: #2563eb; font-size:19px;}
+    .action-btn[disabled] { color: #bbb; cursor: not-allowed;}
+    @media (max-width: 390px) {
+      .complaints-table th, .complaints-table td {font-size: 13px;}
+      .dashboard-header h2 {font-size: 16px;}
+    }
   </style>
 </head>
 <body>
@@ -35,6 +52,37 @@
     CableTV Complaint System
   </header>
   <main>
+    <section id="dashboardSection" class="dashboard-section">
+      <div class="dashboard-header">
+        <h2>Recent Complaints</h2>
+        <button class="refresh-btn" id="refreshComplaintsBtn" title="Refresh complaints"><i class="material-icons">refresh</i></button>
+      </div>
+      <div class="search-bar">
+        <input id="searchName" type="text" placeholder="Search Name">
+        <input id="searchType" type="text" placeholder="Type">
+        <select id="searchStatus">
+          <option value="">Status</option>
+          <option>Pending</option>
+          <option>Resolved</option>
+        </select>
+      </div>
+      <div style="overflow-x:auto;">
+        <table class="complaints-table">
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Type</th>
+              <th>Status</th>
+              <th>Time</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody id="complaintsTableBody">
+            <tr><td colspan="5" style="text-align:center; color:#aaa;">Loading...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
     <button id="registerComplaintBtn" class="btn"><i class="material-icons">add_circle_outline</i>Register Complaint</button>
     <section id="complaintFormSection" class="form-section hidden">
       <div style="display:flex;justify-content:space-between;align-items:center;">
@@ -131,6 +179,7 @@
     };
 
     let customerList = [];
+    let allComplaints = []; // For dashboard filtering
 
     // Show/Hide helpers
     function showSection(id) {
@@ -189,6 +238,7 @@
       });
       form.reset();
       showSuccess();
+      fetchComplaints(); // Refresh dashboard
     });
 
     // Show success and hide form
@@ -221,7 +271,7 @@
       document.getElementById('phone3').value = customer[customerFields.phone3] || "";
     }
 
-    // WORKING AUTOCOMPLETE/SEARCH LOGIC
+    // AUTOCOMPLETE/SEARCH LOGIC
     function setupCustomerAutocomplete() {
       const input = document.getElementById('customerSearchInput');
       const list = document.getElementById('customerAutocompleteList');
@@ -293,7 +343,98 @@
       };
     }
 
+    // DASHBOARD: Fetch and Render Complaints
+    async function fetchComplaints() {
+      const tbody = document.getElementById('complaintsTableBody');
+      tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:#aaa;">Loading...</td></tr>`;
+      try {
+        const res = await fetch(SHEETDB_API + "?sort_by=Timestamp&sort_order=desc");
+        const data = await res.json();
+        allComplaints = data;
+        renderComplaintsTable(data);
+      } catch (e) {
+        tbody.innerHTML = `<tr><td colspan="5" style="color:red;text-align:center;">Failed to load complaints</td></tr>`;
+      }
+    }
+
+    // Render complaint rows
+    function renderComplaintsTable(list) {
+      const tbody = document.getElementById('complaintsTableBody');
+      if (!Array.isArray(list) || list.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:#aaa;">No complaints found.</td></tr>`;
+        return;
+      }
+      tbody.innerHTML = '';
+      list.forEach((c, i) => {
+        const status = c[complaintFields.status] || 'Pending';
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${c[complaintFields.name] || ''}</td>
+          <td>${c[complaintFields.complaintType] || ''}</td>
+          <td><span class="complaint-status ${status}">${status}</span></td>
+          <td style="font-size:13px;">${c[complaintFields.timestamp] || ''}</td>
+          <td>
+            <button class="action-btn" title="Mark as resolved"${status === 'Resolved' ? ' disabled' : ''} data-index="${i}">
+              <i class="material-icons">${status === 'Pending' ? 'done' : 'check_circle'}</i>
+            </button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+      // Add action listeners
+      tbody.querySelectorAll('.action-btn:not([disabled])').forEach(btn => {
+        btn.onclick = function() {
+          const idx = +btn.getAttribute('data-index');
+          markComplaintResolved(idx);
+        }
+      });
+    }
+
+    // Mark as resolved (update in SheetDB by row id)
+    async function markComplaintResolved(idx) {
+      const complaint = allComplaints[idx];
+      if (!complaint || complaint[complaintFields.status] === "Resolved") return;
+      // Find row id
+      const rowId = complaint.id || complaint.ID || complaint.__id || complaint.rowid || null;
+      if (!rowId) {
+        alert("Cannot resolve: Row ID not available.");
+        return;
+      }
+      // PATCH status to Resolved
+      try {
+        await fetch(`${SHEETDB_API}/id/${rowId}`, {
+          method: 'PATCH',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({data: {[complaintFields.status]: "Resolved"}})
+        });
+        fetchComplaints();
+      } catch (e) {
+        alert("Failed to update status.");
+      }
+    }
+
+    // Dashboard search/filter
+    function filterComplaints() {
+      let filtered = allComplaints.slice();
+      const nameVal = document.getElementById('searchName').value.trim().toLowerCase();
+      const typeVal = document.getElementById('searchType').value.trim().toLowerCase();
+      const statusVal = document.getElementById('searchStatus').value;
+      if (nameVal) filtered = filtered.filter(c => (c[complaintFields.name]||'').toLowerCase().includes(nameVal));
+      if (typeVal) filtered = filtered.filter(c => (c[complaintFields.complaintType]||'').toLowerCase().includes(typeVal));
+      if (statusVal) filtered = filtered.filter(c => (c[complaintFields.status]||'Pending') === statusVal);
+      renderComplaintsTable(filtered);
+    }
+    document.getElementById('searchName').oninput =
+    document.getElementById('searchType').oninput =
+    document.getElementById('searchStatus').onchange = filterComplaints;
+
+    document.getElementById('refreshComplaintsBtn').onclick = function() {
+      fetchComplaints();
+    };
+
+    // Initial load
     fetchCustomerList();
+    fetchComplaints();
   </script>
 </body>
 </html>
