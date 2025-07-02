@@ -12,7 +12,6 @@
     .autocomplete-items {position: absolute; z-index: 1000; background: white; border: 1px solid #ccc; width: 100%; max-height: 180px; overflow-y: auto;}
     .autocomplete-item {padding: 8px 12px; cursor: pointer;}
     .autocomplete-item:hover, .autocomplete-active {background: #e2e8f0;}
-    /* Responsive tweak: shrink table, reduce comment width, make resolve visible */
     @media (max-width: 700px) {
       #pendingComplaintsTable th, #pendingComplaintsTable td { font-size: 13px; padding: 6px; }
       #pendingComplaintsTable td.comments-cell { max-width: 90px; word-break: break-word; }
@@ -43,14 +42,14 @@
             <span class="text-green-900 text-2xl font-bold drop-shadow">Pending Complaints</span>
           </div>
         </div>
-        <div id="pendingComplaints2hCard" class="rounded-xl bg-gradient-to-br from-yellow-300 via-yellow-100 to-orange-100 shadow-lg flex flex-col items-center justify-center p-8 btn-animate">
+        <div id="pendingComplaints2hCard" class="rounded-xl bg-gradient-to-br from-yellow-300 via-yellow-100 to-orange-100 shadow-lg flex flex-col items-center justify-center p-8 btn-animate cursor-pointer">
           <i class="material-icons text-yellow-700 text-5xl mb-2 drop-shadow bg-yellow-200 rounded-full p-2">schedule</i>
           <div class="flex flex-col items-center">
             <span id="pendingComplaints2hCount" class="text-yellow-900 font-black text-6xl md:text-7xl leading-none drop-shadow mb-1">0</span>
             <span class="text-yellow-900 text-2xl font-bold drop-shadow">Pending for 2+ hrs</span>
           </div>
         </div>
-        <div id="pendingComplaints24hCard" class="rounded-xl bg-gradient-to-br from-red-400 via-red-200 to-orange-100 shadow-lg flex flex-col items-center justify-center p-8 btn-animate">
+        <div id="pendingComplaints24hCard" class="rounded-xl bg-gradient-to-br from-red-400 via-red-200 to-orange-100 shadow-lg flex flex-col items-center justify-center p-8 btn-animate cursor-pointer">
           <i class="material-icons text-red-700 text-5xl mb-2 drop-shadow bg-red-200 rounded-full p-2">schedule</i>
           <div class="flex flex-col items-center">
             <span id="pendingComplaints24hCount" class="text-red-900 font-black text-6xl md:text-7xl leading-none drop-shadow mb-1">0</span>
@@ -75,7 +74,7 @@
         <button id="backToHomeBtn" class="mr-4 text-gray-600 hover:text-blue-700">
           <i class="material-icons text-3xl">arrow_back</i>
         </button>
-        <h2 class="text-2xl font-bold flex items-center text-green-700">
+        <h2 class="text-2xl font-bold flex items-center text-green-700" id="pendingSectionHeader">
           <i class="material-icons mr-2">pending_actions</i> Pending Complaints
         </h2>
       </div>
@@ -232,18 +231,35 @@
       showHome();
     };
 
-    // Pending Complaints Card click
+    // Section click logic (all sections clickable)
     document.getElementById('pendingComplaintsCard').onclick = function() {
+      showPendingSection('all');
+    };
+    document.getElementById('pendingComplaints2hCard').onclick = function() {
+      showPendingSection('2h');
+    };
+    document.getElementById('pendingComplaints24hCard').onclick = function() {
+      showPendingSection('24h');
+    };
+    document.getElementById('backToHomeBtn').onclick = function() {
+      showHome();
+    };
+
+    function showPendingSection(type) {
       document.getElementById('homeSection').classList.add('hidden');
       document.getElementById('registerComplaintDiv').classList.add('hidden');
       document.getElementById('complaintForm').classList.add('hidden');
       document.getElementById('pendingComplaintsListSection').classList.remove('hidden');
-      loadPendingComplaintsTable();
-    };
-
-    document.getElementById('backToHomeBtn').onclick = function() {
-      showHome();
-    };
+      let head = document.getElementById('pendingSectionHeader');
+      if(type === '2h') {
+        head.innerHTML = `<i class="material-icons mr-2">schedule</i> Pending for 2+ Hours`;
+      } else if(type === '24h') {
+        head.innerHTML = `<i class="material-icons mr-2">schedule</i> Pending for 24+ Hours`;
+      } else {
+        head.innerHTML = `<i class="material-icons mr-2">pending_actions</i> Pending Complaints`;
+      }
+      loadPendingComplaintsTable(type);
+    }
 
     // Customer autofill and autocomplete
     let customerList = [];
@@ -391,13 +407,13 @@
 
         complaints.forEach(c => {
           if ((c[COMPLAINT_FIELDS.status] || "").toLowerCase() === "pending") {
-            pending++;
             const dt = Date.parse(c[COMPLAINT_FIELDS.timestamp]);
             if (!isNaN(dt)) {
               const diffHr = (now - dt) / (1000 * 60 * 60);
               if (diffHr >= 2 && diffHr < 24) pending2h++;
               if (diffHr >= 24) pending24h++;
             }
+            pending++;
           }
         });
         document.getElementById('pendingComplaintsCount').textContent = pending;
@@ -411,19 +427,35 @@
     }
 
     // Pending complaints table
-    async function loadPendingComplaintsTable() {
+    async function loadPendingComplaintsTable(type = 'all') {
       const tbody = document.getElementById('pendingComplaintsTableBody');
       tbody.innerHTML = '<tr><td colspan="4" class="text-center py-6 text-gray-400">Loading...</td></tr>';
       try {
         const res = await fetch(SHEETDB_COMPLAINTS_API + "?sort_by=Timestamp&sort_order=desc");
         const complaints = await res.json();
-        const pending = complaints.filter(c => (c[COMPLAINT_FIELDS.status] || "").toLowerCase() === "pending");
-        if (!pending.length) {
+        const now = new Date();
+        let filtered = complaints.filter(c => (c[COMPLAINT_FIELDS.status] || "").toLowerCase() === "pending");
+        if (type === '2h') {
+          filtered = filtered.filter(c => {
+            const dt = Date.parse(c[COMPLAINT_FIELDS.timestamp]);
+            if (isNaN(dt)) return false;
+            const diffHr = (now - dt) / (1000 * 60 * 60);
+            return diffHr >= 2 && diffHr < 24;
+          });
+        } else if (type === '24h') {
+          filtered = filtered.filter(c => {
+            const dt = Date.parse(c[COMPLAINT_FIELDS.timestamp]);
+            if (isNaN(dt)) return false;
+            const diffHr = (now - dt) / (1000 * 60 * 60);
+            return diffHr >= 24;
+          });
+        }
+        if (!filtered.length) {
           tbody.innerHTML = '<tr><td colspan="4" class="text-center py-6 text-gray-400">No pending complaints.</td></tr>';
           return;
         }
         tbody.innerHTML = "";
-        pending.forEach((c, idx) => {
+        filtered.forEach((c, idx) => {
           const tr = document.createElement("tr");
           tr.className = "hover:bg-green-50";
           tr.innerHTML = `
@@ -453,7 +485,11 @@
           body: JSON.stringify({ data: { [COMPLAINT_FIELDS.status]: "Resolved" } })
         });
         alert("Complaint resolved!");
-        loadPendingComplaintsTable();
+        // Figure out which section is currently visible, reload that
+        let head = document.getElementById('pendingSectionHeader').textContent || '';
+        if(head.includes('2+')) loadPendingComplaintsTable('2h');
+        else if(head.includes('24+')) loadPendingComplaintsTable('24h');
+        else loadPendingComplaintsTable('all');
         fetchAndDisplayPendingCounts();
       } catch {
         alert("Failed to resolve complaint.");
