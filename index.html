@@ -24,6 +24,32 @@
   </header>
 
   <main class="container mx-auto px-4 py-8">
+    <!-- Pending Cards Section -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+      <div id="pendingComplaintsCard" class="rounded-xl bg-gradient-to-br from-green-400 via-green-200 to-green-50 shadow-lg flex flex-col items-center justify-center p-8 btn-animate">
+        <i class="material-icons text-white text-5xl mb-2 drop-shadow bg-green-600 rounded-full p-2">pending_actions</i>
+        <div class="flex flex-col items-center">
+          <span id="pendingComplaintsCount" class="text-green-800 font-black text-6xl md:text-7xl leading-none drop-shadow mb-1">0</span>
+          <span class="text-green-900 text-2xl font-bold drop-shadow">Pending Complaints</span>
+        </div>
+      </div>
+      <div id="pendingComplaints2hCard" class="rounded-xl bg-gradient-to-br from-yellow-300 via-yellow-100 to-orange-100 shadow-lg flex flex-col items-center justify-center p-8 btn-animate">
+        <i class="material-icons text-yellow-700 text-5xl mb-2 drop-shadow bg-yellow-200 rounded-full p-2">schedule</i>
+        <div class="flex flex-col items-center">
+          <span id="pendingComplaints2hCount" class="text-yellow-900 font-black text-6xl md:text-7xl leading-none drop-shadow mb-1">0</span>
+          <span class="text-yellow-900 text-2xl font-bold drop-shadow">Pending for 2+ hrs</span>
+        </div>
+      </div>
+      <div id="pendingComplaints24hCard" class="rounded-xl bg-gradient-to-br from-red-400 via-red-200 to-orange-100 shadow-lg flex flex-col items-center justify-center p-8 btn-animate">
+        <i class="material-icons text-red-700 text-5xl mb-2 drop-shadow bg-red-200 rounded-full p-2">schedule</i>
+        <div class="flex flex-col items-center">
+          <span id="pendingComplaints24hCount" class="text-red-900 font-black text-6xl md:text-7xl leading-none drop-shadow mb-1">0</span>
+          <span class="text-red-900 text-2xl font-bold drop-shadow">Pending for 24+ hrs</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Register Complaint Button -->
     <div id="registerComplaintDiv" class="flex justify-center mb-8">
       <button id="registerComplaintBtn"
         class="rounded-2xl bg-gradient-to-br from-blue-500 via-blue-300 to-sky-300 shadow-xl hover:scale-105 transform transition-all duration-200 flex items-center space-x-4 px-10 py-6 btn-animate text-2xl">
@@ -32,6 +58,7 @@
       </button>
     </div>
 
+    <!-- Complaint Form Section (Hidden by default) -->
     <section id="complaintForm" class="hidden bg-white rounded-lg shadow-lg p-6 max-w-2xl mx-auto">
       <div class="flex justify-between items-center mb-6">
         <h2 class="text-xl font-bold text-gray-800 flex items-center">
@@ -136,7 +163,6 @@
       phone2: "Phone 2",
       phone3: "Phone 3",
       status: "Status"
-      // Remaining columns (ResolvedAt, etc.) are not set on complaint registration
     };
 
     const SHEETDB_CUSTOMERS_API = "https://sheetdb.io/api/v1/f5vg3sptzr3d4";
@@ -283,10 +309,43 @@
         alert("Complaint registered successfully!");
         form.reset();
         document.getElementById('closeFormBtn').click();
+        fetchAndDisplayPendingCounts();
       } catch (err) {
         alert("Failed to register complaint. Please try again!");
       }
     });
+
+    // Pending counts logic
+    async function fetchAndDisplayPendingCounts() {
+      try {
+        const res = await fetch(SHEETDB_COMPLAINTS_API + "?sort_by=Timestamp&sort_order=desc");
+        const complaints = await res.json();
+        const now = new Date();
+        let pending = 0, pending2h = 0, pending24h = 0;
+
+        complaints.forEach(c => {
+          if ((c[COMPLAINT_FIELDS.status] || "").toLowerCase() === "pending") {
+            pending++;
+            const dt = Date.parse(c[COMPLAINT_FIELDS.timestamp]);
+            if (!isNaN(dt)) {
+              const diffHr = (now - dt) / (1000 * 60 * 60);
+              if (diffHr >= 2 && diffHr < 24) pending2h++;
+              if (diffHr >= 24) pending24h++;
+            }
+          }
+        });
+        document.getElementById('pendingComplaintsCount').textContent = pending;
+        document.getElementById('pendingComplaints2hCount').textContent = pending2h;
+        document.getElementById('pendingComplaints24hCount').textContent = pending24h;
+      } catch {
+        document.getElementById('pendingComplaintsCount').textContent = "0";
+        document.getElementById('pendingComplaints2hCount').textContent = "0";
+        document.getElementById('pendingComplaints24hCount').textContent = "0";
+      }
+    }
+
+    // Initial load
+    fetchAndDisplayPendingCounts();
   </script>
 </body>
 </html>
