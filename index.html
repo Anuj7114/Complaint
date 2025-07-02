@@ -9,19 +9,13 @@
   <style>
     .btn-animate {transition: all 0.2s;}
     .btn-animate:hover {transform: translateY(-2px); box-shadow: 0 4px 8px rgba(0,0,0,0.1);}
-    .scrollbar-thin::-webkit-scrollbar {height: 8px;}
-    .scrollbar-thin::-webkit-scrollbar-thumb {background: #cbd5e1; border-radius: 4px;}
-    .scrollbar-thin::-webkit-scrollbar-track {background: #f1f5f9;}
     .autocomplete-items {position: absolute; z-index: 1000; background: white; border: 1px solid #ccc; width: 100%; max-height: 180px; overflow-y: auto;}
     .autocomplete-item {padding: 8px 12px; cursor: pointer;}
     .autocomplete-item:hover, .autocomplete-active {background: #e2e8f0;}
-    .insight-list-btn {cursor: pointer; text-decoration: underline;}
-    .insight-modal-bg {z-index: 9999;}
-    .insight-modal-bg, .insight-modal {transition: all .2s;}
   </style>
 </head>
 <body class="bg-gray-50 font-sans">
-  <!-- Header -->
+
   <header class="bg-blue-600 text-white shadow-md">
     <div class="container mx-auto px-4 py-3 flex items-center">
       <i class="material-icons text-2xl">tv</i>
@@ -30,7 +24,6 @@
   </header>
 
   <main class="container mx-auto px-4 py-8">
-    <!-- Register Complaint Button: Bigger and Centered -->
     <div id="registerComplaintDiv" class="flex justify-center mb-8">
       <button id="registerComplaintBtn"
         class="rounded-2xl bg-gradient-to-br from-blue-500 via-blue-300 to-sky-300 shadow-xl hover:scale-105 transform transition-all duration-200 flex items-center space-x-4 px-10 py-6 btn-animate text-2xl">
@@ -39,7 +32,6 @@
       </button>
     </div>
 
-    <!-- Complaint Form Section (Hidden by default) -->
     <section id="complaintForm" class="hidden bg-white rounded-lg shadow-lg p-6 max-w-2xl mx-auto">
       <div class="flex justify-between items-center mb-6">
         <h2 class="text-xl font-bold text-gray-800 flex items-center">
@@ -120,24 +112,35 @@
     </section>
   </main>
   <script>
-    // SheetDB endpoints
-    const SHEETDB_CUSTOMERS_API = "https://sheetdb.io/api/v1/f5vg3sptzr3d4";
-    const SHEETDB_COMPLAINTS_API = "https://sheetdb.io/api/v1/ner9gfv7uhpnb";
-
-    // Field mapping - MATCH EXACTLY TO SHEET HEADERS
-    const FIELDS = {
+    // Customer sheet mapping (for autofill)
+    const CUSTOMER_FIELDS = {
       name: "NAME",
       stb: "STB Number",
       address: "ADD",
       gps: "GPS",
       phone1: "PHONE 1",
       phone2: "PHONE 2",
-      phone3: "PHONE 3",
+      phone3: "PHONE 3"
+    };
+
+    // Complaint sheet mapping (must exactly match complaint sheet headers)
+    const COMPLAINT_FIELDS = {
+      timestamp: "Timestamp",
+      name: "Name",
       complaintType: "Complaint Type",
       comments: "Comments",
-      status: "Status",
-      timestamp: "Timestamp"
+      stb: "STB Number",
+      address: "Address",
+      gps: "GPS",
+      phone1: "Phone 1",
+      phone2: "Phone 2",
+      phone3: "Phone 3",
+      status: "Status"
+      // Remaining columns (ResolvedAt, etc.) are not set on complaint registration
     };
+
+    const SHEETDB_CUSTOMERS_API = "https://sheetdb.io/api/v1/f5vg3sptzr3d4";
+    const SHEETDB_COMPLAINTS_API = "https://sheetdb.io/api/v1/ner9gfv7uhpnb";
 
     // UI Show/Hide
     document.getElementById('registerComplaintBtn').onclick = function() {
@@ -150,7 +153,7 @@
       document.getElementById('registerComplaintDiv').classList.remove('hidden');
     };
 
-    // Fetch customer list and set up autocomplete
+    // Customer autofill and autocomplete
     let customerList = [];
     async function fetchCustomers() {
       try {
@@ -162,13 +165,13 @@
     fetchCustomers();
 
     function fillCustomerDetails(customer) {
-      document.getElementById('customerSearchInput').value = customer[FIELDS.name] || "";
-      document.getElementById('stbNumber').value = customer[FIELDS.stb] || "";
-      document.getElementById('customerAddress').value = customer[FIELDS.address] || "";
-      document.getElementById('customerLocation').value = customer[FIELDS.gps] || "";
-      document.getElementById('phone1').value = customer[FIELDS.phone1] || "";
-      document.getElementById('phone2').value = customer[FIELDS.phone2] || "";
-      document.getElementById('phone3').value = customer[FIELDS.phone3] || "";
+      document.getElementById('customerSearchInput').value = customer[CUSTOMER_FIELDS.name] || "";
+      document.getElementById('stbNumber').value = customer[CUSTOMER_FIELDS.stb] || "";
+      document.getElementById('customerAddress').value = customer[CUSTOMER_FIELDS.address] || "";
+      document.getElementById('customerLocation').value = customer[CUSTOMER_FIELDS.gps] || "";
+      document.getElementById('phone1').value = customer[CUSTOMER_FIELDS.phone1] || "";
+      document.getElementById('phone2').value = customer[CUSTOMER_FIELDS.phone2] || "";
+      document.getElementById('phone3').value = customer[CUSTOMER_FIELDS.phone3] || "";
     }
 
     function setupCustomerAutocomplete() {
@@ -184,7 +187,7 @@
           return;
         }
         const matches = customerList.filter(c =>
-          (c[FIELDS.name] || "").toLowerCase().includes(val)
+          (c[CUSTOMER_FIELDS.name] || "").toLowerCase().includes(val)
         );
         if (matches.length === 0) {
           list.style.display = 'none';
@@ -193,11 +196,11 @@
         matches.slice(0, 20).forEach((c, idx) => {
           const item = document.createElement('div');
           item.className = 'autocomplete-item';
-          item.textContent = c[FIELDS.name];
+          item.textContent = c[CUSTOMER_FIELDS.name];
           item.tabIndex = -1;
           item.onmousedown = function(e) {
             e.preventDefault();
-            input.value = c[FIELDS.name];
+            input.value = c[CUSTOMER_FIELDS.name];
             fillCustomerDetails(c);
             list.innerHTML = '';
             list.style.display = 'none';
@@ -235,12 +238,11 @@
       };
       input.onchange = function() {
         const val = this.value.trim().toLowerCase();
-        const customer = customerList.find(c => (c[FIELDS.name] || "").toLowerCase() === val);
+        const customer = customerList.find(c => (c[CUSTOMER_FIELDS.name] || "").toLowerCase() === val);
         if (customer) fillCustomerDetails(customer);
       };
     }
 
-    // Complaint Form Submit
     function getLocalTimestamp() {
       const now = new Date();
       const pad = n => n.toString().padStart(2, '0');
@@ -260,17 +262,17 @@
       e.preventDefault();
       const form = e.target;
       const data = {
-        [FIELDS.timestamp]: getLocalTimestamp(),
-        [FIELDS.name]: form.customerSearchInput.value.trim(),
-        [FIELDS.stb]: form.stbNumber.value.trim(),
-        [FIELDS.complaintType]: form.complaintType.value.trim(),
-        [FIELDS.comments]: form.comments.value.trim(),
-        [FIELDS.address]: form.customerAddress.value.trim(),
-        [FIELDS.gps]: form.customerLocation.value.trim(),
-        [FIELDS.phone1]: form.phone1.value.trim(),
-        [FIELDS.phone2]: form.phone2.value.trim(),
-        [FIELDS.phone3]: form.phone3.value.trim(),
-        [FIELDS.status]: "Pending"
+        [COMPLAINT_FIELDS.timestamp]: getLocalTimestamp(),
+        [COMPLAINT_FIELDS.name]: form.customerSearchInput.value.trim(),
+        [COMPLAINT_FIELDS.complaintType]: form.complaintType.value.trim(),
+        [COMPLAINT_FIELDS.comments]: form.comments.value.trim(),
+        [COMPLAINT_FIELDS.stb]: form.stbNumber.value.trim(),
+        [COMPLAINT_FIELDS.address]: form.customerAddress.value.trim(),
+        [COMPLAINT_FIELDS.gps]: form.customerLocation.value.trim(),
+        [COMPLAINT_FIELDS.phone1]: form.phone1.value.trim(),
+        [COMPLAINT_FIELDS.phone2]: form.phone2.value.trim(),
+        [COMPLAINT_FIELDS.phone3]: form.phone3.value.trim(),
+        [COMPLAINT_FIELDS.status]: "Pending"
       };
       try {
         await fetch(SHEETDB_COMPLAINTS_API, {
