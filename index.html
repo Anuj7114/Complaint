@@ -20,6 +20,7 @@
     #pendingComplaintsTable td, #pendingComplaintsTable th { white-space: normal; }
     #pendingComplaintsTable .resolve-cell { width: 1%; }
     #pendingComplaintsTable .action-buttons { display: flex; flex-wrap: nowrap; gap: 0.25rem; }
+    .form-label {font-size:0.98rem;}
   </style>
 </head>
 <body class="bg-gray-50 font-sans">
@@ -102,6 +103,91 @@
           </table>
         </div>
       </div>
+    </section>
+
+    <!-- Resolve Complaint Form Section (Hidden by default) -->
+    <section id="resolveFormSection" class="hidden bg-white rounded-lg shadow-lg p-6 max-w-2xl mx-auto">
+      <div class="flex justify-between items-center mb-6">
+        <h2 class="text-xl font-bold text-green-700 flex items-center">
+          <i class="material-icons mr-2">check_circle</i>
+          Resolve Complaint
+        </h2>
+        <button id="closeResolveFormBtn" class="text-gray-500 hover:text-gray-700">
+          <i class="material-icons">close</i>
+        </button>
+      </div>
+      <form id="resolveFormElement" class="space-y-4" autocomplete="off">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label class="form-label block text-gray-700 mb-1">Name</label>
+            <input id="resolveName" type="text" class="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-100" readonly>
+          </div>
+          <div>
+            <label class="form-label block text-gray-700 mb-1">Complaint Type</label>
+            <input id="resolveComplaintType" type="text" class="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-100" readonly>
+          </div>
+        </div>
+        <div>
+          <label class="form-label block text-gray-700 mb-1">Comments</label>
+          <textarea id="resolveComments" rows="2" class="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-100" readonly></textarea>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label class="form-label block text-gray-700 mb-1">STB Number</label>
+            <input id="resolveSTB" type="text" class="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-100" readonly>
+          </div>
+          <div>
+            <label class="form-label block text-gray-700 mb-1">GPS</label>
+            <input id="resolveGPS" type="text" class="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-100" readonly>
+          </div>
+        </div>
+        <div>
+          <label class="form-label block text-gray-700 mb-1">Address</label>
+          <textarea id="resolveAddress" rows="2" class="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-100" readonly></textarea>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div>
+            <label class="form-label block text-gray-700 mb-1">Phone 1</label>
+            <input id="resolvePhone1" type="text" class="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-100" readonly>
+          </div>
+          <div>
+            <label class="form-label block text-gray-700 mb-1">Phone 2</label>
+            <input id="resolvePhone2" type="text" class="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-100" readonly>
+          </div>
+          <div>
+            <label class="form-label block text-gray-700 mb-1">Phone 3</label>
+            <input id="resolvePhone3" type="text" class="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-100" readonly>
+          </div>
+        </div>
+        <div>
+          <label class="form-label block text-gray-700 mb-1">Resolution Type</label>
+          <select id="resolutionType" class="w-full px-3 py-2 border border-gray-300 rounded-md" required>
+            <option value="">Select resolution type</option>
+            <option value="Carbon cleaning">Carbon cleaning</option>
+            <option value="F Nut loose">F Nut loose</option>
+            <option value="Wire Shifted">Wire Shifted</option>
+            <option value="Connection Shifted">Connection Shifted</option>
+            <option value="Area Restored">Area Restored</option>
+            <option value="Electric Fail at Node">Electric Fail at Node</option>
+            <option value="Node/Ampli Change">Node/Ampli Change</option>
+            <option value="AV HDMI source change">AV HDMI source change</option>
+            <option value="TV Faulty">TV Faulty</option>
+            <option value="Wire Faulty">Wire Faulty</option>
+            <option value="Adopter Faulty">Adopter Faulty</option>
+            <option value="Remote Faulty">Remote Faulty</option>
+            <option value="Main Line Repaired">Main Line Repaired</option>
+            <option value="Other">Other</option>
+          </select>
+        </div>
+        <div class="flex justify-end space-x-3 pt-4">
+          <button type="button" id="cancelResolveBtn" class="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50">
+            Cancel
+          </button>
+          <button type="submit" class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 btn-animate">
+            Resolve Complaint
+          </button>
+        </div>
+      </form>
     </section>
 
     <!-- Complaint Form Section (Hidden by default) -->
@@ -208,7 +294,9 @@
       phone1: "Phone 1",
       phone2: "Phone 2",
       phone3: "Phone 3",
-      status: "Status"
+      status: "Status",
+      resolutionReason: "Resolution Reason", // for resolution type
+      resolvedAt: "ResolvedAt"
     };
 
     const SHEETDB_CUSTOMERS_API = "https://sheetdb.io/api/v1/f5vg3sptzr3d4";
@@ -220,15 +308,22 @@
       document.getElementById('registerComplaintDiv').classList.remove('hidden');
       document.getElementById('complaintForm').classList.add('hidden');
       document.getElementById('pendingComplaintsListSection').classList.add('hidden');
+      document.getElementById('resolveFormSection').classList.add('hidden');
     }
     document.getElementById('registerComplaintBtn').onclick = function() {
       document.getElementById('homeSection').classList.add('hidden');
       document.getElementById('registerComplaintDiv').classList.add('hidden');
       document.getElementById('complaintForm').classList.remove('hidden');
       document.getElementById('pendingComplaintsListSection').classList.add('hidden');
+      document.getElementById('resolveFormSection').classList.add('hidden');
     };
     document.getElementById('closeFormBtn').onclick =
     document.getElementById('cancelComplaintBtn').onclick = function() {
+      showHome();
+    };
+
+    document.getElementById('closeResolveFormBtn').onclick =
+    document.getElementById('cancelResolveBtn').onclick = function() {
       showHome();
     };
 
@@ -251,6 +346,7 @@
       document.getElementById('registerComplaintDiv').classList.add('hidden');
       document.getElementById('complaintForm').classList.add('hidden');
       document.getElementById('pendingComplaintsListSection').classList.remove('hidden');
+      document.getElementById('resolveFormSection').classList.add('hidden');
       let head = document.getElementById('pendingSectionHeader');
       if(type === '2h') {
         head.innerHTML = `<i class="material-icons mr-2">schedule</i> Pending for 2+ Hours`;
@@ -427,6 +523,9 @@
       }
     }
 
+    // Variable to hold the complaint selected for resolution
+    let currentResolveComplaint = null;
+
     // Pending complaints table
     async function loadPendingComplaintsTable(type = 'all') {
       const tbody = document.getElementById('pendingComplaintsTableBody');
@@ -468,7 +567,7 @@
             <td class="px-2 py-2 comments-cell">${c[COMPLAINT_FIELDS.comments] || ""}</td>
             <td class="px-2 py-2 resolve-cell">
               <div class="action-buttons">
-                <button class="bg-green-600 text-white px-2 py-1 rounded hover:bg-green-700 btn-animate" onclick="resolveComplaintRow('${c[COMPLAINT_FIELDS.timestamp]}','${c[COMPLAINT_FIELDS.name].replace(/'/g,"\\'")}')">Resolve</button>
+                <button class="bg-green-600 text-white px-2 py-1 rounded hover:bg-green-700 btn-animate" onclick="openResolveForm('${c[COMPLAINT_FIELDS.timestamp].replace(/'/g,"\\'")}','${c[COMPLAINT_FIELDS.name].replace(/'/g,"\\'")}')">Resolve</button>
                 <button class="bg-blue-600 text-white px-2 py-1 rounded hover:bg-blue-700 btn-animate" onclick="goComplaintRow('${c[COMPLAINT_FIELDS.timestamp]}','${c[COMPLAINT_FIELDS.name].replace(/'/g,"\\'")}','${gpsEscaped}')">Go</button>
               </div>
             </td>
@@ -480,28 +579,73 @@
       }
     }
 
-    // Resolve complaint function (SheetDB only supports PATCH by row id or unique field, so we use Timestamp+Name as a unique key)
-    window.resolveComplaintRow = async function(timestamp, name) {
-      if (!timestamp || !name) { alert("Missing complaint data."); return; }
+    // Show Resolve Complaint Form
+    window.openResolveForm = async function(timestamp, name) {
+      // Find complaint by timestamp and name
       try {
-        // PATCH using filter by timestamp AND name
-        const patchUrl = SHEETDB_COMPLAINTS_API + `/search?${encodeURIComponent(COMPLAINT_FIELDS.timestamp)}=${encodeURIComponent(timestamp)}&${encodeURIComponent(COMPLAINT_FIELDS.name)}=${encodeURIComponent(name)}`;
+        const res = await fetch(SHEETDB_COMPLAINTS_API + `/search?${encodeURIComponent(COMPLAINT_FIELDS.timestamp)}=${encodeURIComponent(timestamp)}&${encodeURIComponent(COMPLAINT_FIELDS.name)}=${encodeURIComponent(name)}`);
+        const data = await res.json();
+        if (!data || !Array.isArray(data) || data.length === 0) {
+          alert("Complaint not found!");
+          return;
+        }
+        const complaint = data[0];
+        currentResolveComplaint = complaint;
+        // Fill fields
+        document.getElementById('resolveName').value = complaint[COMPLAINT_FIELDS.name] || "";
+        document.getElementById('resolveComplaintType').value = complaint[COMPLAINT_FIELDS.complaintType] || "";
+        document.getElementById('resolveComments').value = complaint[COMPLAINT_FIELDS.comments] || "";
+        document.getElementById('resolveSTB').value = complaint[COMPLAINT_FIELDS.stb] || "";
+        document.getElementById('resolveGPS').value = complaint[COMPLAINT_FIELDS.gps] || "";
+        document.getElementById('resolveAddress').value = complaint[COMPLAINT_FIELDS.address] || "";
+        document.getElementById('resolvePhone1').value = complaint[COMPLAINT_FIELDS.phone1] || "";
+        document.getElementById('resolvePhone2').value = complaint[COMPLAINT_FIELDS.phone2] || "";
+        document.getElementById('resolvePhone3').value = complaint[COMPLAINT_FIELDS.phone3] || "";
+        document.getElementById('resolutionType').value = "";
+        // Show/hide sections
+        document.getElementById('homeSection').classList.add('hidden');
+        document.getElementById('registerComplaintDiv').classList.add('hidden');
+        document.getElementById('complaintForm').classList.add('hidden');
+        document.getElementById('pendingComplaintsListSection').classList.add('hidden');
+        document.getElementById('resolveFormSection').classList.remove('hidden');
+      } catch {
+        alert("Could not load complaint details.");
+      }
+    };
+
+    // Resolve Complaint Form submit
+    document.getElementById('resolveFormElement').addEventListener('submit', async function(e) {
+      e.preventDefault();
+      const resolutionType = document.getElementById('resolutionType').value;
+      if (!currentResolveComplaint) {
+        alert("Complaint not loaded.");
+        return;
+      }
+      if (!resolutionType) {
+        alert("Please select a resolution type.");
+        return;
+      }
+      try {
+        // PATCH using timestamp and name
+        const patchUrl = SHEETDB_COMPLAINTS_API + `/search?${encodeURIComponent(COMPLAINT_FIELDS.timestamp)}=${encodeURIComponent(currentResolveComplaint[COMPLAINT_FIELDS.timestamp])}&${encodeURIComponent(COMPLAINT_FIELDS.name)}=${encodeURIComponent(currentResolveComplaint[COMPLAINT_FIELDS.name])}`;
+        const now = getLocalTimestamp();
         await fetch(patchUrl, {
           method: "PATCH",
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ data: { [COMPLAINT_FIELDS.status]: "Resolved" } })
+          body: JSON.stringify({ data: {
+            [COMPLAINT_FIELDS.status]: "Resolved",
+            [COMPLAINT_FIELDS.resolutionReason]: resolutionType,
+            [COMPLAINT_FIELDS.resolvedAt]: now
+          }})
         });
         alert("Complaint resolved!");
-        // Figure out which section is currently visible, reload that
-        let head = document.getElementById('pendingSectionHeader').textContent || '';
-        if(head.includes('2+')) loadPendingComplaintsTable('2h');
-        else if(head.includes('24+')) loadPendingComplaintsTable('24h');
-        else loadPendingComplaintsTable('all');
+        currentResolveComplaint = null;
+        showHome();
         fetchAndDisplayPendingCounts();
       } catch {
         alert("Failed to resolve complaint.");
       }
-    };
+    });
 
     // Go complaint function (opens Google Maps with GPS destination)
     window.goComplaintRow = function(timestamp, name, gps) {
