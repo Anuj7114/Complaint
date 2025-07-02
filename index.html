@@ -395,31 +395,25 @@
       }
     });
 
-    // For SheetDB Free Plan: "Resolve" is simulated by adding a new row with status "Resolved" and same key fields
+    // For SheetDB Free Plan: "Resolve" is simulated by adding a new row with status "Resolved"
     async function resolveComplaintRow(timestamp, name, complaintData) {
       if (!timestamp || !name) { alert("Missing complaint data."); return; }
-      // Add a new row with the same fields but status "Resolved"
       let resolveData = Object.assign({}, complaintData);
-      resolveData[COMPLAINT_FIELDS.status] = "Resolved";
-      resolveData[COMPLAINT_FIELDS.timestamp] = getLocalTimestamp();
-      try {
-        await fetch(SHEETDB_COMPLAINTS_API, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ data: resolveData })
-        });
-        alert("Complaint resolved! (Simulated, row added as 'Resolved')");
-        let head = document.getElementById('pendingSectionHeader').textContent || '';
-        if(head.includes('2+')) loadPendingComplaintsTable('2h');
-        else if(head.includes('24+')) loadPendingComplaintsTable('24h');
-        else loadPendingComplaintsTable('all');
-        fetchAndDisplayPendingCounts();
-      } catch {
-        alert("Failed to resolve complaint.");
-      }
+      resolveData["Status"] = "Resolved";
+      resolveData["Timestamp"] = getLocalTimestamp();
+      await fetch(SHEETDB_COMPLAINTS_API, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ data: resolveData })
+      });
+      alert("Complaint resolved! (Simulated, row added as 'Resolved')");
+      let head = document.getElementById('pendingSectionHeader').textContent || '';
+      if(head.includes('2+')) loadPendingComplaintsTable('2h');
+      else if(head.includes('24+')) loadPendingComplaintsTable('24h');
+      else loadPendingComplaintsTable('all');
+      fetchAndDisplayPendingCounts();
     }
 
-    // Counts logic (free plan: count only current pending)
     async function fetchAndDisplayPendingCounts() {
       try {
         const res = await fetch(SHEETDB_COMPLAINTS_API + "?sort_by=Timestamp&sort_order=desc");
@@ -429,13 +423,12 @@
         // Only count latest status for each Name+STB
         let latestMap = {};
         complaints.forEach(c => {
-          // Use Name+STB as key (STB or GPS or Phone1 if Name is not unique)
-          let key = (c[COMPLAINT_FIELDS.name]||"") + "|" + (c[COMPLAINT_FIELDS.stb]||"");
+          let key = (c["Name"]||"") + "|" + (c["STB Number"]||"");
           if (!latestMap[key]) latestMap[key] = c;
         });
         Object.values(latestMap).forEach(c => {
-          if ((c[COMPLAINT_FIELDS.status] || "").toLowerCase() === "pending") {
-            const dt = Date.parse(c[COMPLAINT_FIELDS.timestamp]);
+          if ((c["Status"] || "").toLowerCase() === "pending") {
+            const dt = Date.parse(c["Timestamp"]);
             if (!isNaN(dt)) {
               const diffHr = (now - dt) / (1000 * 60 * 60);
               if (diffHr >= 2 && diffHr < 24) pending2h++;
@@ -454,7 +447,6 @@
       }
     }
 
-    // Pending complaints table
     async function loadPendingComplaintsTable(type = 'all') {
       const tbody = document.getElementById('pendingComplaintsTableBody');
       tbody.innerHTML = '<tr><td colspan="4" class="text-center py-6 text-gray-400">Loading...</td></tr>';
@@ -465,20 +457,20 @@
         // Show only the latest status per Name+STB
         let latestMap = {};
         complaints.forEach(c => {
-          let key = (c[COMPLAINT_FIELDS.name]||"") + "|" + (c[COMPLAINT_FIELDS.stb]||"");
+          let key = (c["Name"]||"") + "|" + (c["STB Number"]||"");
           if (!latestMap[key]) latestMap[key] = c;
         });
-        let filtered = Object.values(latestMap).filter(c => (c[COMPLAINT_FIELDS.status] || "").toLowerCase() === "pending");
+        let filtered = Object.values(latestMap).filter(c => (c["Status"] || "").toLowerCase() === "pending");
         if (type === '2h') {
           filtered = filtered.filter(c => {
-            const dt = Date.parse(c[COMPLAINT_FIELDS.timestamp]);
+            const dt = Date.parse(c["Timestamp"]);
             if (isNaN(dt)) return false;
             const diffHr = (now - dt) / (1000 * 60 * 60);
             return diffHr >= 2 && diffHr < 24;
           });
         } else if (type === '24h') {
           filtered = filtered.filter(c => {
-            const dt = Date.parse(c[COMPLAINT_FIELDS.timestamp]);
+            const dt = Date.parse(c["Timestamp"]);
             if (isNaN(dt)) return false;
             const diffHr = (now - dt) / (1000 * 60 * 60);
             return diffHr >= 24;
@@ -490,19 +482,19 @@
         }
         tbody.innerHTML = "";
         filtered.forEach((c, idx) => {
-          const gpsValue = (c[COMPLAINT_FIELDS.gps] || "").trim();
+          const gpsValue = (c["GPS"] || "").trim();
           const gpsEscaped = gpsValue.replace(/'/g, "\\'");
           const cData = JSON.stringify(c).replace(/"/g, "&quot;"); // for inline passing
           const tr = document.createElement("tr");
           tr.className = "hover:bg-green-50";
           tr.innerHTML = `
-            <td class="px-2 py-2 truncate">${c[COMPLAINT_FIELDS.name] || ""}</td>
-            <td class="px-2 py-2 truncate">${c[COMPLAINT_FIELDS.complaintType] || ""}</td>
-            <td class="px-2 py-2 comments-cell">${c[COMPLAINT_FIELDS.comments] || ""}</td>
+            <td class="px-2 py-2 truncate">${c["Name"] || ""}</td>
+            <td class="px-2 py-2 truncate">${c["Complaint Type"] || ""}</td>
+            <td class="px-2 py-2 comments-cell">${c["Comments"] || ""}</td>
             <td class="px-2 py-2 resolve-cell">
               <div class="action-buttons">
-                <button class="bg-green-600 text-white px-2 py-1 rounded hover:bg-green-700 btn-animate" onclick='resolveComplaintRow("${c[COMPLAINT_FIELDS.timestamp]}","${c[COMPLAINT_FIELDS.name].replace(/'/g,"\\'")}",JSON.parse("${cData}"))'>Resolve</button>
-                <button class="bg-blue-600 text-white px-2 py-1 rounded hover:bg-blue-700 btn-animate" onclick="goComplaintRow('${c[COMPLAINT_FIELDS.timestamp]}','${c[COMPLAINT_FIELDS.name].replace(/'/g,"\\'")}','${gpsEscaped}')">Go</button>
+                <button class="bg-green-600 text-white px-2 py-1 rounded hover:bg-green-700 btn-animate" onclick='resolveComplaintRow("${c["Timestamp"]}","${c["Name"].replace(/'/g,"\\'")}",JSON.parse("${cData}"))'>Resolve</button>
+                <button class="bg-blue-600 text-white px-2 py-1 rounded hover:bg-blue-700 btn-animate" onclick="goComplaintRow('${c["Timestamp"]}','${c["Name"].replace(/'/g,"\\'")}','${gpsEscaped}')">Go</button>
               </div>
             </td>
           `;
@@ -513,7 +505,6 @@
       }
     }
 
-    // Go complaint function (opens Google Maps with GPS destination)
     window.goComplaintRow = function(timestamp, name, gps) {
       if (!gps) {
         alert("No GPS coordinates for this customer.");
