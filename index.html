@@ -55,6 +55,7 @@
       touch-action: manipulation;
       user-select: none;
       letter-spacing: .01em;
+      cursor: pointer;
     }
     .btn:active { background: #2563eb; transform: scale(0.97);}
     .dash-grid {display: flex; flex-direction: column; gap:12px;}
@@ -222,10 +223,10 @@
     CableTV Complaint System
   </header>
   <main>
-    <div id="registerComplaintDiv">
-      <button id="registerComplaintBtn" class="btn"><i class="material-icons">add_circle_outline</i>Register Complaint</button>
-    </div>
     <section id="homeSection">
+      <button id="registerComplaintBtn" class="btn" style="margin-bottom:22px;">
+        <i class="material-icons">add_circle_outline</i>Register Complaint
+      </button>
       <div class="dash-grid">
         <button id="pendingComplaintsBtn" class="dash-card green">
           <i class="material-icons">pending_actions</i>
@@ -277,13 +278,14 @@
       </div>
       <div id="pendingComplaintsCardList" class="mob-list"></div>
     </section>
-    <section id="complaintForm" class="form-section hidden">
+
+    <section id="complaintFormSection" class="form-section hidden">
       <div style="display:flex;justify-content:space-between;align-items:center;">
-        <h2 style="font-size:17px;margin:0;font-weight:bold;">Register New Complaint</h2>
+        <h2 style="font-size:18px;margin:0;font-weight:bold;">Register Complaint</h2>
         <button id="closeFormBtn" style="background:none;border:none;color:#374151;font-size:23px;"><i class="material-icons">close</i></button>
       </div>
-      <form id="complaintFormElement" autocomplete="off">
-        <label>Customer Name</label>
+      <form id="complaintFormElement" autocomplete="off" style="margin-top:4px;">
+        <label for="customerSearchInput" style="margin-top:12px;">Customer Name</label>
         <input id="customerSearchInput" name="name" type="text" placeholder="Type to search customer name..." autocomplete="off" required>
         <div id="customerAutocompleteList" class="autocomplete-items" style="display:none;"></div>
         <label>STB Number</label>
@@ -373,10 +375,9 @@
     let complaintData = [], customerList = [];
     // Show/hide helpers
     function showSection(id) {
-      document.getElementById('registerComplaintDiv').classList.add('hidden');
       document.getElementById('homeSection').classList.add('hidden');
       document.getElementById('pendingListSection').classList.add('hidden');
-      document.getElementById('complaintForm').classList.add('hidden');
+      document.getElementById('complaintFormSection').classList.add('hidden');
       document.getElementById(id).classList.remove('hidden');
     }
     function formatDate(val) {
@@ -511,17 +512,17 @@
       document.getElementById('insightModalContent').innerHTML = "";
     }
     document.getElementById('registerComplaintBtn').onclick = function() {
-      showSection('complaintForm');
+      showSection('complaintFormSection');
     };
     document.getElementById('closeFormBtn').onclick =
     document.getElementById('cancelComplaintBtn').onclick = function() {
-      showSection('registerComplaintDiv'); showSection('homeSection');
+      showSection('homeSection');
     };
     document.getElementById('pendingComplaintsBtn').onclick = function() {renderPendingComplaintsList("all");};
     document.getElementById('pendingComplaints2hBtn').onclick = function() {renderPendingComplaintsList("2h");};
     document.getElementById('pendingComplaints24hBtn').onclick = function() {renderPendingComplaintsList("24h");};
     document.getElementById('backToHomeBtn').onclick = function() {
-      showSection('registerComplaintDiv'); showSection('homeSection');
+      showSection('homeSection');
     };
     document.getElementById('showDailyPendingListBtn').onclick = function() { renderInsightListModal("dailyPending"); };
     document.getElementById('showDailyResolvedListBtn').onclick = function() { renderInsightListModal("dailyResolved"); };
@@ -555,7 +556,6 @@
         body: JSON.stringify(payload)
       });
       form.reset();
-      showSection('registerComplaintDiv');
       showSection('homeSection');
       setTimeout(loadComplaints, 600);
       alert("Complaint registered!");
