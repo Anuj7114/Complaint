@@ -124,7 +124,7 @@
     const SHEETDB_CUSTOMERS_API = "https://sheetdb.io/api/v1/f5vg3sptzr3d4";
     const SHEETDB_COMPLAINTS_API = "https://sheetdb.io/api/v1/ner9gfv7uhpnb";
 
-    // Field mapping
+    // Field mapping - MATCH EXACTLY TO SHEET HEADERS
     const FIELDS = {
       name: "NAME",
       stb: "STB Number",
@@ -162,6 +162,7 @@
     fetchCustomers();
 
     function fillCustomerDetails(customer) {
+      document.getElementById('customerSearchInput').value = customer[FIELDS.name] || "";
       document.getElementById('stbNumber').value = customer[FIELDS.stb] || "";
       document.getElementById('customerAddress').value = customer[FIELDS.address] || "";
       document.getElementById('customerLocation').value = customer[FIELDS.gps] || "";
@@ -182,9 +183,8 @@
           list.style.display = 'none';
           return;
         }
-        const nameKey = FIELDS.name;
         const matches = customerList.filter(c =>
-          (c[nameKey] || "").toLowerCase().includes(val)
+          (c[FIELDS.name] || "").toLowerCase().includes(val)
         );
         if (matches.length === 0) {
           list.style.display = 'none';
@@ -193,11 +193,11 @@
         matches.slice(0, 20).forEach((c, idx) => {
           const item = document.createElement('div');
           item.className = 'autocomplete-item';
-          item.textContent = c[nameKey];
+          item.textContent = c[FIELDS.name];
           item.tabIndex = -1;
           item.onmousedown = function(e) {
             e.preventDefault();
-            input.value = c[nameKey];
+            input.value = c[FIELDS.name];
             fillCustomerDetails(c);
             list.innerHTML = '';
             list.style.display = 'none';
@@ -235,8 +235,7 @@
       };
       input.onchange = function() {
         const val = this.value.trim().toLowerCase();
-        const nameKey = FIELDS.name;
-        const customer = customerList.find(c => (c[nameKey] || "").toLowerCase() === val);
+        const customer = customerList.find(c => (c[FIELDS.name] || "").toLowerCase() === val);
         if (customer) fillCustomerDetails(customer);
       };
     }
