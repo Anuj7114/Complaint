@@ -2,62 +2,198 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Customer Name Autocomplete Demo</title>
+  <title>CableTV Complaint System</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
   <style>
-    .autocomplete-items {
-      position: absolute;
-      background: #fff;
-      border: 1px solid #aaa;
-      max-height: 180px;
-      overflow-y: auto;
-      border-radius: 5px;
-      width: 100%;
-      z-index: 1000;
+    body {
+      max-width: 440px;
+      margin: 0 auto;
+      background: #f3f4f6;
+      font-family: 'Roboto', Arial, sans-serif;
+      color: #111;
+      font-size: 17px;
+      padding-bottom: 65px;
     }
-    .autocomplete-item {
-      padding: 10px 15px;
+    header {
+      background: #2563eb;
+      color: #fff;
+      padding: 15px 0 13px 0;
+      font-size: 20px;
+      font-weight: bold;
+      letter-spacing: .01em;
+      text-align: center;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      box-shadow: 0 2px 9px rgba(0,0,0,0.07);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+    header .material-icons { font-size: 28px; }
+    main {padding: 16px;}
+    .btn {
+      width: 100%;
+      padding: 16px 0;
+      margin: 18px 0 10px 0;
+      background: linear-gradient(90deg,#2563eb 60%,#38bdf8);
+      color: #fff;
+      font-weight: bold;
+      font-size: 19px;
+      border: none;
+      border-radius: 16px;
+      box-shadow: 0 2px 7px rgba(37,99,235,0.10);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      transition: background .17s, transform .13s;
+      outline: none;
+      touch-action: manipulation;
+      user-select: none;
+      letter-spacing: .01em;
       cursor: pointer;
     }
-    .autocomplete-item:hover,
-    .autocomplete-active { background: #e0e7ef; }
-    .row { display: flex; gap: 8px; }
-    .row > div { flex: 1; }
+    .btn:active { background: #2563eb; transform: scale(0.97);}
+    .form-section {
+      background: #fff;
+      border-radius: 15px;
+      box-shadow: 0 1px 11px rgba(0,0,0,0.11);
+      margin: 21px 0;
+      padding: 17px 14px 8px 14px;
+      font-size:17px;
+    }
+    .form-section label {font-weight:500;display:block;margin: 5px 0 2px 2px;}
+    .form-section input, .form-section select, .form-section textarea {
+      width: 100%;
+      font-size: 16px;
+      border: 1.3px solid #d1d5db;
+      border-radius: 9px;
+      padding: 10px 9px;
+      margin-bottom: 7px;
+      background: #f9fafb;
+      color: #333;
+      box-sizing: border-box;
+    }
+    .form-section textarea {resize:vertical;}
+    .form-section .row {display:flex;gap:9px;}
+    .form-section .row > div {flex:1;}
+    .form-section .form-actions {
+      display:flex;justify-content:flex-end;gap:12px;padding:14px 0 7px 0;
+    }
+    .form-section .form-btn {
+      padding:10px 23px;
+      background:#2563eb;
+      border:none;
+      border-radius:8px;
+      color:#fff;
+      font-weight:700;
+      font-size:18px;
+      letter-spacing:0.01em;
+    }
+    .form-section .form-btn.cancel {
+      background: #e5e7eb;
+      color: #374151;
+      font-weight: 600;
+    }
+    .autocomplete-items {
+      position:absolute;z-index:1000;background:#fff;
+      border:1.2px solid #d1d5db;width:100%;max-height:180px;overflow-y:auto;
+      border-radius:9px;
+      left:0;top:100%;
+      margin-top:2px;
+    }
+    .autocomplete-item {
+      padding:13px 15px;
+      font-size:1em;
+      cursor:pointer;
+    }
+    .autocomplete-item:active, .autocomplete-active {background:#e0e7ef;}
+    .hidden {display:none !important;}
+    @media (max-width: 340px) {
+      body, main {font-size:15px;}
+      .btn {font-size:16px;}
+      .form-section {font-size:15px;}
+    }
   </style>
 </head>
 <body>
-  <form autocomplete="off" style="max-width:400px;margin:30px auto;position:relative">
-    <label>Customer Name</label>
-    <input id="customerSearchInput" name="name" type="text" placeholder="Type customer name..." autocomplete="name" required>
-    <div id="customerAutocompleteList" class="autocomplete-items" style="display:none;"></div>
-    <label>STB Number</label>
-    <input id="stbNumber" name="stbNumber" type="text" autocomplete="off" readonly>
-    <label>Address</label>
-    <input id="customerAddress" name="address" autocomplete="street-address" readonly>
-    <div class="row">
-      <div>
-        <label>GPS</label>
-        <input id="customerLocation" name="gps" autocomplete="off" readonly>
+  <header>
+    <i class="material-icons">tv</i>
+    CableTV Complaint System
+  </header>
+  <main>
+    <button id="registerComplaintBtn" class="btn"><i class="material-icons">add_circle_outline</i>Register Complaint</button>
+    <section id="complaintFormSection" class="form-section hidden">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <h2 style="font-size:18px;margin:0;font-weight:bold;">Register Complaint</h2>
+        <button id="closeFormBtn" style="background:none;border:none;color:#374151;font-size:23px;"><i class="material-icons">close</i></button>
       </div>
-      <div>
-        <label>Phone 1</label>
-        <input id="phone1" name="phone1" autocomplete="tel" readonly>
-      </div>
+      <form id="complaintFormElement" autocomplete="off" style="margin-top:4px; position:relative;">
+        <label for="customerSearchInput" style="margin-top:12px;">Customer Name</label>
+        <input id="customerSearchInput" name="name" type="text" placeholder="Type to search customer name..." autocomplete="name" required>
+        <div id="customerAutocompleteList" class="autocomplete-items" style="display:none;"></div>
+        <label>STB Number</label>
+        <input id="stbNumber" name="stbNumber" type="text" autocomplete="off" readonly>
+        <label>Complaint Type</label>
+        <select id="complaintType" name="complaintType" autocomplete="off" required>
+          <option value="">Select complaint type</option>
+          <option>Channel Freezing</option>
+          <option>No Sound</option>
+          <option>No video</option>
+          <option>Loose Connection</option>
+          <option>Complete Dead</option>
+          <option>No Signal</option>
+          <option>New Connection Request</option>
+          <option>Payment Collection Request</option>
+          <option>Connection Shifting Request</option>
+          <option>Main Line Breakdown Road</option>
+          <option>Wire Shifting</option>
+          <option>New Remote</option>
+          <option>New Adapter</option>
+          <option>Other</option>
+        </select>
+        <label>Comments (Optional)</label>
+        <textarea id="comments" name="comments" rows="2" placeholder="Add any additional details..." autocomplete="off"></textarea>
+        <label>Customer Address</label>
+        <textarea id="customerAddress" name="address" rows="2" autocomplete="street-address" readonly></textarea>
+        <div class="row">
+          <div>
+            <label>Customer Location (GPS)</label>
+            <input id="customerLocation" name="gps" type="text" autocomplete="off" readonly>
+          </div>
+          <div>
+            <label>Phone 1</label>
+            <input id="phone1" name="phone1" type="text" autocomplete="tel" readonly>
+          </div>
+        </div>
+        <div class="row">
+          <div>
+            <label>Phone 2</label>
+            <input id="phone2" name="phone2" type="text" autocomplete="tel" readonly>
+          </div>
+          <div>
+            <label>Phone 3</label>
+            <input id="phone3" name="phone3" type="text" autocomplete="tel" readonly>
+          </div>
+        </div>
+        <div class="form-actions">
+          <button type="button" id="cancelComplaintBtn" class="form-btn cancel">Cancel</button>
+          <button type="submit" class="form-btn">Submit</button>
+        </div>
+      </form>
+    </section>
+    <div id="successMsg" style="display:none;padding:20px 10px 10px 10px;color:#22c55e;font-weight:600;font-size:18px;text-align:center;">
+      Complaint Registered Successfully!
     </div>
-    <div class="row">
-      <div>
-        <label>Phone 2</label>
-        <input id="phone2" name="phone2" autocomplete="tel" readonly>
-      </div>
-      <div>
-        <label>Phone 3</label>
-        <input id="phone3" name="phone3" autocomplete="tel" readonly>
-      </div>
-    </div>
-  </form>
+  </main>
   <script>
-    // CHANGE THIS TO YOUR SHEETDB CUSTOMERS ENDPOINT
+    // SheetDB API endpoints -- replace with your actual endpoint if needed
+    const SHEETDB_API = "https://sheetdb.io/api/v1/ner9gfv7uhpnb";
     const SHEETDB_CUSTOMERS_API = "https://sheetdb.io/api/v1/f5vg3sptzr3d4";
-    // Map your sheet headers exactly
+    // Customer fields (update if Google Sheet headers change)
     const customerFields = {
       stb: "STB Number",
       name: "NAME",
@@ -67,8 +203,76 @@
       phone2: "PHONE 2",
       phone3: "PHONE 3"
     };
+    // Complaint fields
+    const complaintFields = {
+      timestamp: "Timestamp",
+      name: "Name",
+      complaintType: "Complaint Type",
+      comments: "Comments",
+      stbNumber: "STB Number",
+      address: "Address",
+      gps: "GPS",
+      phone1: "Phone 1",
+      phone2: "Phone 2",
+      phone3: "Phone 3",
+      status: "Status"
+    };
+
     let customerList = [];
 
+    // Show/Hide helpers
+    function showSection(id) {
+      document.getElementById('complaintFormSection').classList.add('hidden');
+      document.getElementById('successMsg').style.display = 'none';
+      if(id) document.getElementById(id).classList.remove('hidden');
+    }
+
+    document.getElementById('registerComplaintBtn').onclick = function() {
+      showSection('complaintFormSection');
+    };
+    document.getElementById('closeFormBtn').onclick =
+    document.getElementById('cancelComplaintBtn').onclick = function() {
+      showSection();
+    };
+
+    // Show success and hide form
+    function showSuccess() {
+      document.getElementById('complaintFormSection').classList.add('hidden');
+      document.getElementById('successMsg').style.display = '';
+      setTimeout(() => {
+        document.getElementById('successMsg').style.display = 'none';
+      }, 2000);
+    }
+
+    // Complaint submit
+    document.getElementById('complaintFormElement').addEventListener('submit', async function(e) {
+      e.preventDefault();
+      const form = e.target;
+      const payload = {
+        data: {
+          [complaintFields.timestamp]: new Date().toISOString(),
+          [complaintFields.name]: form.name.value,
+          [complaintFields.complaintType]: form.complaintType.value,
+          [complaintFields.comments]: form.comments.value,
+          [complaintFields.stbNumber]: form.stbNumber.value,
+          [complaintFields.address]: form.address.value,
+          [complaintFields.gps]: form.gps.value,
+          [complaintFields.phone1]: form.phone1.value,
+          [complaintFields.phone2]: form.phone2.value,
+          [complaintFields.phone3]: form.phone3.value,
+          [complaintFields.status]: "Pending"
+        }
+      };
+      await fetch(SHEETDB_API, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      form.reset();
+      showSuccess();
+    });
+
+    // Fetch customers and set up autocomplete
     async function fetchCustomerList() {
       try {
         const res = await fetch(SHEETDB_CUSTOMERS_API);
@@ -89,6 +293,7 @@
       document.getElementById('phone3').value = customer[customerFields.phone3] || "";
     }
 
+    // WORKING AUTOCOMPLETE/SEARCH LOGIC
     function setupCustomerAutocomplete() {
       const input = document.getElementById('customerSearchInput');
       const list = document.getElementById('customerAutocompleteList');
