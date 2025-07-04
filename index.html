@@ -395,23 +395,72 @@
       }
     });
 
-    // For SheetDB Free Plan: "Resolve" is simulated by adding a new row with status "Resolved"
+    // Now, this function will attempt to update the existing row.
     async function resolveComplaintRow(timestamp, name, complaintData) {
-      if (!timestamp || !name) { alert("Missing complaint data."); return; }
-      let resolveData = Object.assign({}, complaintData);
-      resolveData["Status"] = "Resolved";
-      resolveData["Timestamp"] = getLocalTimestamp();
-      await fetch(SHEETDB_COMPLAINTS_API, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ data: resolveData })
-      });
-      alert("Complaint resolved! (Simulated, row added as 'Resolved')");
-      let head = document.getElementById('pendingSectionHeader').textContent || '';
-      if(head.includes('2+')) loadPendingComplaintsTable('2h');
-      else if(head.includes('24+')) loadPendingComplaintsTable('24h');
-      else loadPendingComplaintsTable('all');
-      fetchAndDisplayPendingCounts();
+      if (!timestamp || !name) {
+        alert("Missing complaint data to identify the row for update.");
+        return;
+      }
+
+      // Data to be updated
+      const updateData = {
+        [COMPLAINT_FIELDS.status]: "Resolved"
+        // We are not changing other fields, including Timestamp,
+        // so the original complaint time is preserved.
+        // The original COMPLAINT_FIELDS.timestamp is used in the URL to identify the row.
+      };
+
+      // Construct the URL for updating using search_or_update.
+      // This allows matching based on multiple query parameters.
+      // We use encodeURIComponent to ensure Name and Timestamp are correctly formatted in the URL.
+      const apiUrl = `${SHEETDB_COMPLAINTS_API}/search_or_update?${COMPLAINT_FIELDS.name}=${encodeURIComponent(name)}&${COMPLAINT_FIELDS.timestamp}=${encodeURIComponent(timestamp)}`;
+
+      try {
+        const response = await fetch(apiUrl, {
+          method: "PATCH", // Using PATCH for partial update of existing record(s)
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ data: updateData }) // Data to update
+        });
+
+        if (!response.ok) {
+          // Try to get more error info from SheetDB if the response is not OK
+          const errorResult = await response.json().catch(() => ({ error: "Could not parse error response from SheetDB." }));
+          throw new Error(`SheetDB API Error: ${response.status} ${response.statusText}. ${errorResult.error || JSON.stringify(errorResult)}`);
+        }
+
+        const result = await response.json();
+        
+        // SheetDB returns {"updated": N} or {"updated": "N"} on successful update.
+        // Check if any rows were actually updated.
+        // (SheetDB might return 0 if the data is the same, e.g., already "Resolved")
+        if (result.updated > 0 || parseInt(result.updated) > 0) {
+          alert("Complaint status updated to Resolved!");
+        } else if (result.updated === 0 || result.updated === "0") {
+          alert("Complaint found, but status was not changed (it might have been already Resolved or data matched existing). Please verify.");
+        }
+        else {
+          // This case might indicate that no row matched the criteria.
+          alert("Complaint not found or no rows updated. Please check the details and try again.");
+        }
+
+        // Reload the table and counts regardless of update count,
+        // as the underlying data might have changed or needs refresh.
+        let headElement = document.getElementById('pendingSectionHeader');
+        let head = headElement ? headElement.textContent || '' : '';
+        
+        if (head.includes('2+')) {
+            loadPendingComplaintsTable('2h');
+        } else if (head.includes('24+')) {
+            loadPendingComplaintsTable('24h');
+        } else {
+            loadPendingComplaintsTable('all');
+        }
+        fetchAndDisplayPendingCounts();
+
+      } catch (err) {
+        console.error("Error resolving complaint:", err);
+        alert(`Failed to update complaint status: ${err.message}`);
+      }
     }
 
     async function fetchAndDisplayPendingCounts() {
@@ -525,3 +574,4 @@
   </script>
 </body>
 </html>
+
